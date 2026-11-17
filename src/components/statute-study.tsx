@@ -52,7 +52,7 @@ export function StatuteStudy({ tab, id }: { tab: Tab; id?: string }) {
             <Total label="其他出處" value={`${report.guidance.length} 項`} />
           </div>
           <p className="text-sm leading-6 text-muted-foreground">
-            同一題即使重複寫同一條，只計一次。第26條和第26A條分開。款號併入所屬條文，例如第30B(13)條計入第30B條。作業備考、守則、署方網頁和職位廣告不放進法例排名。
+            同一題即使重複寫同一條，只計一次。第26條和第26A條分開。排名仍把款號併入所屬條文，例如第30B(13)條計入第30B條。打開某一條，詳情才會把寫過的款、段、節分開數。作業備考、守則、署方網頁和職位廣告不放進法例排名。
           </p>
           <RankedList
             title="條例及規例"
@@ -186,6 +186,37 @@ function RankedList({
   );
 }
 
+function SubBreakdown({ item }: { item: StatuteRecord }) {
+  return (
+    <section className="space-y-3">
+      <h3 className="font-semibold">款、段、節的引用</h3>
+      <p className="text-sm leading-6 text-muted-foreground">
+        同一題、同一個款或段只計一次。只寫第{item.section}條、沒有寫款號的，放在「整條／未指明款」，不會當成某一款。次序跟法例本身，不是按字母。
+      </p>
+      <ol className="space-y-3">
+        {item.subProvisions.map((sub) => (
+          <li key={sub.key} className="rounded-lg bg-muted/50 px-3 py-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="font-medium leading-6">{sub.label}</span>
+              <span className="shrink-0 text-sm font-semibold tabular-nums">{sub.count} 題</span>
+            </div>
+            <ul className="mt-2 space-y-1">
+              {sub.questions.map((question) => (
+                <li key={question.id}>
+                  <Link href={practiceHref(question.id)} className="underline underline-offset-4">
+                    {question.title}
+                  </Link>
+                  <span className="text-muted-foreground"> · {question.id}</span>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 function Detail({ item }: { item: StatuteRecord }) {
   const note = statuteCatalogue(item.id);
   const report = buildStatuteReport();
@@ -254,6 +285,10 @@ function Detail({ item }: { item: StatuteRecord }) {
             </ul>
           )}
         </section>
+      )}
+
+      {item.kind === "ordinance" && item.subProvisions.length > 0 && (
+        <SubBreakdown item={item} />
       )}
 
       {item.url && (

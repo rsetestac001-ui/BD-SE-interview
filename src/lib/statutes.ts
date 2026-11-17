@@ -1,5 +1,14 @@
 import catalogueJson from "../../data/statutes.json";
 import { questions } from "./bank";
+import {
+  compareProvisionPaths,
+  provisionKey,
+  provisionLabel,
+  provisionsFromLabel,
+  sectionsFromLabel,
+} from "./statute-parse";
+
+export { sectionsFromLabel };
 import type { Basis, Question } from "./types";
 
 export type StatuteKind = "ordinance" | "guidance" | "vague";
@@ -18,6 +27,14 @@ export type StatuteCatalogueEntry = {
   relatedIds?: string[];
 };
 
+export type SubProvisionRecord = {
+  key: string;
+  path: string[];
+  label: string;
+  count: number;
+  questions: CitingQuestion[];
+};
+
 export type StatuteRecord = {
   id: string;
   kind: StatuteKind;
@@ -33,6 +50,7 @@ export type StatuteRecord = {
   labels: string[];
   notes: string[];
   questions: CitingQuestion[];
+  subProvisions: SubProvisionRecord[];
 };
 
 type Instrument = {
@@ -50,6 +68,7 @@ type Bucket = {
   notes: string[];
   urls: Map<string, number>;
   questions: Map<string, CitingQuestion>;
+  subs: Map<string, { path: string[]; questions: Map<string, CitingQuestion> }>;
 };
 
 const catalogue = catalogueJson as Record<string, StatuteCatalogueEntry>;
@@ -67,15 +86,30 @@ export function buildStatuteReport(source: Question[] = questions) {
 
   for (const question of source) {
     const seen = new Set<string>();
+    const seenSubs = new Set<string>();
     for (const basis of question.legalBasis) {
       for (const hit of classifyBasis(basis)) {
-        if (seen.has(hit.id)) continue;
-        seen.add(hit.id);
         const bucket = buckets.get(hit.id) ?? emptyBucket(hit);
-        bucket.labels.set(basis.label, (bucket.labels.get(basis.label) ?? 0) + 1);
-        if (basis.note && !bucket.notes.includes(basis.note)) bucket.notes.push(basis.note);
-        if (basis.url) bucket.urls.set(basis.url, (bucket.urls.get(basis.url) ?? 0) + 1);
-        bucket.questions.set(question.id, { id: question.id, title: question.title });
+        if (!seen.has(hit.id)) {
+          seen.add(hit.id);
+          bucket.labels.set(basis.label, (bucket.labels.get(basis.label) ?? 0) + 1);
+          if (basis.note && !bucket.notes.includes(basis.note)) bucket.notes.push(basis.note);
+          if (basis.url) bucket.urls.set(basis.url, (bucket.urls.get(basis.url) ?? 0) + 1);
+          bucket.questions.set(question.id, { id: question.id, title: question.title });
+        }
+        if (hit.kind === "ordinance" && hit.section) {
+          for (const provision of provisionsFromLabel(basis.label)) {
+            if (provision.section !== hit.section) continue;
+            const subKey = `${hit.id}|${provisionKey(provision.path)}`;
+            if (seenSubs.has(subKey)) continue;
+            seenSubs.add(subKey);
+            const sub =
+              bucket.subs.get(provisionKey(provision.path)) ??
+              { path: provision.path, questions: new Map<string, CitingQuestion>() };
+            sub.questions.set(question.id, { id: question.id, title: question.title });
+            bucket.subs.set(provisionKey(provision.path), sub);
+          }
+        }
         buckets.set(hit.id, bucket);
       }
     }
@@ -140,42 +174,13 @@ export function classifyBasis(basis: Basis): Array<{
   }));
 }
 
-export function sectionsFromLabel(label: string) {
-  const found: string[] = [];
-  const normalized = label.replace(/（/g, "(").replace(/）/g, ")");
-  const pattern = /第([^條]{1,160})條/g;
-  for (const match of normalized.matchAll(pattern)) {
-    const body = match[1].replace(/\s+/g, "").replace(/標題/g, "");
-    let index = 0;
-    while (index < body.length) {
-      const section = /^(\d+[A-Z]*)/.exec(body.slice(index));
-      if (section) {
-        const id = section[1];
-        if (!found.includes(id)) found.push(id);
-        index += id.length;
-        continue;
-      }
-      if (body[index] === "(") {
-        const end = body.indexOf(")", index);
-        if (end < 0) break;
-        index = end + 1;
-        continue;
-      }
-      const mark = body[index];
-      if (mark === "及" || mark === "、" || mark === "，" || mark === "和" || mark === "與") {
-        index += 1;
-        continue;
-      }
-      break;
-    }
-  }
-  return found;
-}
-
 function detectInstrument(label: string, url: string): Instrument | null {
   const blob = `${label} ${url}`;
   if (/cap123A|第123A章|建築物\(管理\)規例|建築物（管理）規例/.test(blob)) {
     return { cap: "123A", title: "《建築物(管理)規例》" };
+  }
+  if (/cap123L|第123L章|建築物\(上訴\)規例|建築物（上訴）規例/.test(blob)) {
+    return { cap: "123L", title: "《建築物(上訴)規例》" };
   }
   if (/cap123(?![A-Za-z])|《建築物條例》|第123章/.test(blob)) {
     return { cap: "123", title: "《建築物條例》" };
@@ -209,6 +214,7 @@ function emptyBucket(hit: {
     notes: [],
     urls: new Map(),
     questions: new Map(),
+    subs: new Map(),
   };
 }
 
@@ -244,7 +250,25 @@ function toRecord(bucket: Bucket, total: number): StatuteRecord {
     labels,
     notes: bucket.notes,
     questions: [...bucket.questions.values()].sort((a, b) => a.id.localeCompare(b.id)),
+    subProvisions: subProvisions(bucket),
   };
+}
+
+function subProvisions(bucket: Bucket): SubProvisionRecord[] {
+  if (bucket.kind !== "ordinance" || !bucket.section) return [];
+  return [...bucket.subs.values()]
+    .map((sub) => ({
+      key: provisionKey(sub.path) || "bare",
+      path: sub.path,
+      label: provisionLabel(bucket.section ?? "", sub.path),
+      count: sub.questions.size,
+      questions: [...sub.questions.values()].sort((a, b) => a.id.localeCompare(b.id)),
+    }))
+    .sort((a, b) => {
+      if (a.path.length === 0) return b.path.length === 0 ? 0 : -1;
+      if (b.path.length === 0) return 1;
+      return compareProvisionPaths(a.path, b.path);
+    });
 }
 
 function guidanceHeading(labels: string[]) {

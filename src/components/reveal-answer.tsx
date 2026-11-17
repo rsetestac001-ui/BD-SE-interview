@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { SpokenAnswer } from "@/components/spoken-answer";
 import { Button } from "@/components/ui/button";
 import type { Question } from "@/lib/types";
 
@@ -11,7 +12,7 @@ export function RevealAnswer({ question }: { question: Question }) {
     <div className="space-y-3">
       {open ? (
         <div className="space-y-3">
-          <p className="leading-8">{question.modelAnswer}</p>
+          <SpokenAnswer text={question.modelAnswer} />
           <div>
             <h4 className="font-medium">容易講錯</h4>
             <ul className="mt-1 list-disc space-y-1 pl-5 leading-7 text-muted-foreground">
