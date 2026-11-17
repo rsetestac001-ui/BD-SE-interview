@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bookmark, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SpokenAnswer } from "@/components/spoken-answer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/components/use-store";
@@ -213,7 +214,9 @@ export function PracticeSession({
           )}
           <div>
             <h2 className="text-sm font-medium text-muted-foreground">示範答法</h2>
-            <p className="mt-1 leading-8 whitespace-pre-wrap">{question.modelAnswer}</p>
+            <div className="mt-1">
+              <SpokenAnswer text={question.modelAnswer} />
+            </div>
           </div>
           <div>
             <h2 className="text-sm font-medium text-muted-foreground">法理依據</h2>
