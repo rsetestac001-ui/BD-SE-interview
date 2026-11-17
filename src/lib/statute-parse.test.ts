@@ -74,6 +74,47 @@ test("sorts in statutory order, not alphabetically", () => {
   assert.ok(compareProvisionPaths(["2A", "a", "i"], ["2B"]) < 0);
 });
 
+test("scenario answers that need both roles keep one citation list", () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
+  const questions = JSON.parse(readFileSync(join(root, "data/questions.json"), "utf8")) as Array<{
+    id: string;
+    kind: string;
+    modelAnswer: string;
+    roles?: Array<{ id: string; heading: string; answer: string; why: string }>;
+    legalBasis: unknown[];
+  }>;
+  const excluded = new Set(["q01", "q02", "q05", "q07", "q09", "q11", "q13", "q59", "q60"]);
+  let existing = 0;
+  let added = 0;
+  for (const question of questions) {
+    const number = Number(question.id.slice(1));
+    const expectsRoles = question.kind === "scenario" && !excluded.has(question.id);
+    if (!expectsRoles) {
+      assert.equal(question.roles, undefined, question.id);
+      continue;
+    }
+    assert.ok(question.roles, question.id);
+    assert.deepEqual(
+      question.roles.map((role) => role.id),
+      ["officer", "citizen"],
+      question.id,
+    );
+    assert.equal(question.roles[0].heading, "情況一：如果我係屋宇署人員");
+    assert.equal(question.roles[1].heading, "情況二：如果我係普通市民");
+    const [spoken, why] = question.modelAnswer.split("\n\n點解：");
+    assert.equal(question.roles[0].answer, spoken, question.id);
+    assert.equal(question.roles[0].why, why, question.id);
+    assert.ok(question.roles[1].answer.length > 40, question.id);
+    assert.ok(question.roles[1].why.length > 15, question.id);
+    assert.ok(!("legalBasis" in question.roles[0]) && !("legalBasis" in question.roles[1]));
+    assert.ok(question.legalBasis.length > 0);
+    if (number >= 87) added += 1;
+    else existing += 1;
+  }
+  assert.equal(existing, 54);
+  assert.equal(added, 24);
+});
+
 test("every bank label yields the same parent sections from both parsers", () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
   const questions = JSON.parse(readFileSync(join(root, "data/questions.json"), "utf8")) as Array<{

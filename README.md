@@ -30,7 +30,7 @@ npm start
 
 | 檔案 | 作用 |
 | --- | --- |
-| `data/topics.json` | 十二個課題的 id、名稱、簡介和排序 |
+| `data/topics.json` | 課題的 id、名稱、簡介和排序。當中「屋宇署人員實戰」是假設個案，答案分開屋宇署人員和普通市民。 |
 | `data/questions.json` | 全部情境題和選擇題 |
 
 `src/lib/bank.ts` 在建置時讀入這兩份 JSON。每題包含：
@@ -39,7 +39,7 @@ npm start
 - `topicId`：對應 `topics.json` 的 id
 - `kind`：`scenario` 或 `mcq`
 - `title`、`prompt`：題幹
-- `modelAnswer`：模範答案撮要
+- `modelAnswer`：模範答案撮要。有兩種身份時另有可選的 `roles`，練習頁和時事頁會分兩塊顯示；法理依據仍然只計 `legalBasis`
 - `legalBasis`：法例或官方出處，每項有 `label`、`note`、`url`
 - `pitfalls`：常見陷阱
 - 選擇題另有 `options`（`id` 由 A 至 D，加上 `text`）和 `answerKey`

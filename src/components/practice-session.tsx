@@ -215,7 +215,7 @@ export function PracticeSession({
           <div>
             <h2 className="text-sm font-medium text-muted-foreground">示範答法</h2>
             <div className="mt-1">
-              <SpokenAnswer text={question.modelAnswer} />
+              <SpokenAnswer text={question.modelAnswer} roles={question.roles} />
             </div>
           </div>
           <div>

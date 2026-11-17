@@ -12,7 +12,7 @@ export function RevealAnswer({ question }: { question: Question }) {
     <div className="space-y-3">
       {open ? (
         <div className="space-y-3">
-          <SpokenAnswer text={question.modelAnswer} />
+          <SpokenAnswer text={question.modelAnswer} roles={question.roles} />
           <div>
             <h4 className="font-medium">容易講錯</h4>
             <ul className="mt-1 list-disc space-y-1 pl-5 leading-7 text-muted-foreground">
