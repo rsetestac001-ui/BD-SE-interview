@@ -1,15 +1,6 @@
 import Link from "next/link";
+import { SiteNav } from "@/components/site-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
-
-const links = [
-  { href: "/", label: "首頁" },
-  { href: "/mbis", label: "驗樓" },
-  { href: "/practice?mode=random", label: "隨機" },
-  { href: "/review", label: "複習" },
-  { href: "/sources", label: "出處" },
-];
-
-const mobileLinks = links.filter((link) => link.href !== "/sources");
 
 export function SiteFrame({ children }: { children: React.ReactNode }) {
   return (
@@ -24,17 +15,7 @@ export function SiteFrame({ children }: { children: React.ReactNode }) {
               合約結構工程師面試
             </span>
           </Link>
-          <nav className="hidden items-center gap-1 md:flex" aria-label="主要">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="rounded-lg px-3 py-2 text-sm hover:bg-muted"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+          <SiteNav variant="desktop" />
           <ThemeToggle />
         </div>
       </header>
@@ -51,24 +32,7 @@ export function SiteFrame({ children }: { children: React.ReactNode }) {
           </p>
         </div>
       </footer>
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur md:hidden"
-        aria-label="流動版主要"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      >
-        <ul className="grid grid-cols-4">
-          {mobileLinks.map((link) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                className="flex h-14 items-center justify-center text-sm font-medium"
-              >
-                {link.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <SiteNav variant="mobile" />
     </>
   );
 }

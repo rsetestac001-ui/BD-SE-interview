@@ -80,6 +80,29 @@ export function HomeDashboard() {
         </div>
       </section>
 
+      <section aria-label="法例與時事" className="grid gap-3 sm:grid-cols-2">
+        <Link href="/statutes" className="block">
+          <Card className="h-full transition-colors hover:bg-muted/60">
+            <CardHeader>
+              <CardTitle className="text-base">法例出現次數</CardTitle>
+              <CardDescription className="text-sm leading-6">
+                看這本題庫最常引用哪一條，再打開該條的詳情。次數不是官方面試頻率。
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/affairs" className="block">
+          <Card className="h-full transition-colors hover:bg-muted/60">
+            <CardHeader>
+              <CardTitle className="text-base">時事與維修監管</CardTitle>
+              <CardDescription className="text-sm leading-6">
+                官方個案、已實施的抽查，以及尚未成為法例的改革。控罪不是定罪。
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+      </section>
+
       <section aria-label="進度" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="題庫" value={String(questions.length)} />
         <Stat label="已看過" value={String(stats.touched)} />
