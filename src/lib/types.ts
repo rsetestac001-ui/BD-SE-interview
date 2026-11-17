@@ -16,6 +16,13 @@ export type Choice = {
   text: string;
 };
 
+export type RolePerspective = {
+  id: "officer" | "citizen";
+  heading: string;
+  answer: string;
+  why: string;
+};
+
 export type Question = {
   id: string;
   topicId: string;
@@ -25,6 +32,7 @@ export type Question = {
   options?: Choice[];
   answerKey?: string;
   modelAnswer: string;
+  roles?: RolePerspective[];
   legalBasis: Basis[];
   pitfalls: string[];
 };
