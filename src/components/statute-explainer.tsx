@@ -25,24 +25,24 @@ export function StatuteExplainer({ references }: { references: string }) {
         </button>)}
       </div>
       {active && (
-        <div role="dialog" aria-modal="true" aria-label={active.title}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
-          onClick={() => setActive(null)}>
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-background p-5 shadow-2xl"
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="text-xl font-semibold">{active.title}</h2>
-              <button type="button" onClick={() => setActive(null)} aria-label="關閉法例解釋" className="rounded-lg border px-3 py-1.5">✕</button>
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">上層架構：{active.parent}</p>
-            <div className="mt-4 space-y-4 text-sm leading-7">
-              <div><strong>一句人話</strong><p>{active.plain}</p></div>
-              <div><strong>點解有呢條法例？</strong><p>{active.why}</p></div>
-              <div><strong>面試要小心</strong><p>{active.caution}</p></div>
-            </div>
-            <a className="mt-5 inline-block text-sm underline underline-offset-4" href="https://www.elegislation.gov.hk/hk/cap123" target="_blank" rel="noopener noreferrer">開啟官方 Cap.123 全文 ↗</a>
+        <aside
+          role="dialog"
+          aria-modal="false"
+          aria-label={active.title}
+          className="fixed bottom-20 left-3 right-3 z-[100] max-h-[65dvh] overflow-y-auto rounded-2xl border bg-background p-4 shadow-2xl ring-1 ring-foreground/10 sm:bottom-6 sm:left-auto sm:right-6 sm:w-[390px] sm:max-h-[72dvh] sm:p-5"
+        >
+          <div className="sticky top-0 -mx-1 flex items-start justify-between gap-3 bg-background pb-3">
+            <h2 className="text-base font-semibold leading-6">{active.title}</h2>
+            <button type="button" onClick={() => setActive(null)} aria-label="關閉法例解釋" className="shrink-0 rounded-lg border px-3 py-1.5 text-sm hover:bg-muted">✕</button>
           </div>
-        </div>
+          <p className="text-xs text-muted-foreground">所屬架構：{active.parent}</p>
+          <div className="mt-3 space-y-3 text-sm leading-7">
+            <div><strong>一句人話</strong><p>{active.plain}</p></div>
+            <div><strong>點解有呢條法例？</strong><p>{active.why}</p></div>
+            <div><strong>面試要小心</strong><p>{active.caution}</p></div>
+          </div>
+          <a className="mt-4 inline-block text-sm underline underline-offset-4" href="https://www.elegislation.gov.hk/hk/cap123" target="_blank" rel="noopener noreferrer">開啟官方 Cap.123 全文 ↗</a>
+        </aside>
       )}
     </>
   );
