@@ -6,6 +6,10 @@ const references = {
   minor: ["Minor Works Control System（小型工程監管制度）", "用嚟查工程屬於邊一級、要搵邊類承建商、開工同完工要交咩。", "https://www.bd.gov.hk/en/building-works/minor-works/index.html"],
   op: ["PNAP APP-13（完工證明同入伙紙）", "睇新樓點申請 OP（入伙紙），以及 BA12／BA13（相關完工同入伙申請表）點用。", "https://www.bd.gov.hk/doc/en/resources/codes-and-references/practice-notes-and-circular-letters/pnap/APP/APP013.pdf"],
   ubw: ["Unauthorised Building Works（違例建築工程）", "睇屋宇署點處理違建同發命令。", "https://www.bd.gov.hk/en/safety-inspection/unauthorised-building-works/index.html"],
+  newWorks: ["New Building Works（新建工程）", "屋宇署講搵邊個做專業工作、要交咩圖，以及點申請批圖同開工同意。", "https://www.bd.gov.hk/en/building-works/new-building-works/index.html"],
+  supervision: ["PNRC 63（承建商作業備考）", "用預製混凝土工程做例子，講 §4 同 §9 下專業人士同承建商點分工。", "https://www.bd.gov.hk/doc/en/resources/codes-and-references/practice-notes-and-circular-letters/pnrc/Pnrc63.pdf"],
+  worksRoutes: ["PNAP APP-47（違例改建及加建工程）", "睇一般申請、小型工程簡化程序同 §41 嘅豁免點分。", "https://www.bd.gov.hk/doc/en/resources/codes-and-references/practice-notes-and-circular-letters/pnap/APP/APP047.pdf"],
+  orders: ["Statutory Orders（法定命令）", "查拆卸命令、修理同調查命令，以及按 §44 上訴嘅官方步驟。", "https://www.bd.gov.hk/en/resources/faq/index_statutory_orders.html"],
   mbisScope: ["MBIS（強制驗樓）｜驗邊啲", "查邊類樓適用，同埋驗樓一定要睇嘅五類項目。", "https://www.bd.gov.hk/en/safety-inspection/mbis/scope-and-standards/index.html"],
   mbisTime: ["MBIS（強制驗樓）｜有幾耐", "睇大廈公用部分同個別處所各有幾耐，以及隔幾耐先可以再發通知。", "https://www.bd.gov.hk/en/safety-inspection/mbis/learn-more-about-MBIS/index_mbis_overview_time.html"],
   mbisFlow: ["MBIS（強制驗樓）｜官方流程", "由搵 RI（註冊檢驗人員）開始，一直睇到驗、修同交文件。", "https://www.bd.gov.hk/en/safety-inspection/mbis/procedures/index.html"],
@@ -23,65 +27,87 @@ const courses = {
   bo: {
     name: "BO（建築物條例）",
     eyebrow: "CAP. 123",
-    title: "BO（建築物條例）",
-    intro: "跟住一幢樓由畫圖到入伙，再睇用咗幾十年要點維修。每一步都講邊個負責、要過邊一關，同點解要咁做。",
-    metrics: [["Cap. 123", "Buildings Ordinance（主法例）"], ["批圖 → 准開工", "一般工程要過兩關"], ["§30B / §30C", "強制驗樓／驗窗"]],
+    title: "BO（建築物條例）框架",
+    intro: "先睇成部條例點分 Part（部分），再跟起樓嘅次序睇入則、開工同完工。遇到問題，你會知應該揭邊一 Part、搵邊條。",
+    metrics: [["7 個 Parts", "由註冊、管工程到上訴"], ["§14", "批圖同准開工係兩道關"], ["§44", "有啲 BA 決定可以上訴"]],
+    framework: {
+      heading: "Cap. 123 目錄｜有問題揭邊一 Part？",
+      columns: ["條例位置", "嗰部分講咩", "可以先睇"],
+      rows: [
+        ["開頭條文", "先查法例點定義 Building Works（建築工程）等字眼。", "§2 定義｜§2A 指定專門工程"],
+        ["Part 1（註冊同委任）", "邊個合資格？請咗佢之後，邊樣工作由佢負責？", "§3 專業名冊｜§4 委任專業人士｜§9 委任註冊承建商"],
+        ["Part 2（樓宇管制）", "圖點批？幾時可以開工、入伙？有違建或者危險樓宇，BA 可以點處理？", "§14 批圖同開工｜§21 入伙｜§24 違建｜§26／§26A 危險同調查"],
+        ["Part 3（雜項同一般條文）", "一般權力同程序放喺呢度，例如代做工程後點追費，以及點訂立附屬規例。", "§33 追收費用同附加費｜§38 訂立規例"],
+        ["Part 4（罪行）", "咩行為可能犯法？定罪後可以點罰？", "§40 罪行"],
+        ["Part 5（豁免）", "邊啲工程按法例有豁免？邊啲情況可以申請放寬要求？", "§41 法定豁免｜§42 BA（建築事務監督）嘅豁免權力"],
+        ["Part 6（上訴）", "收到可以上訴嘅 BA 決定，向邊度同點樣提出上訴？", "§44 就 BA 決定上訴｜§47 上訴通知｜§48 上訴審裁團"],
+        ["Part 7（過渡安排）", "改例之前已經發生嘅事，例如舊有上訴，按咩規則繼續處理？", "§53E 起"],
+        ["Schedules（附表）", "有啲名單、地區同條件列咗喺附表，需要時同正文一齊睇。", "Schedule 5（附表 5）列出 Scheduled Areas（指定地區）"]
+      ],
+      ref: "bo"
+    },
     steps: [
       [
-        "要睇邊份文件", "有問題，應該先揭邊份文件？",
-        "先睇 Buildings Ordinance (BO，建築物條例)，搵到邊個有權同邊個有責任。再睇 Subsidiary Legislation（附屬法例），查實際要做咩。到要落手做，就查 Code of Practice（作業守則）同 Practice Notes (PNAP，屋宇署畀認可人士、結構同岩土工程師嘅作業備考)。",
-        "例如有人問「屋宇署憑咩叫我驗樓？」答案要喺 BO 搵。如果問「驗完用邊張表交？」就查對應規例同屋宇署表格。",
-        "由 §30B 搵到強制驗樓嘅法定通知，再查 Cap. 123P、驗樓作業守則同 MBI Forms（驗樓表格）。",
-        ["bo", "regulation", "practice"]
-      ],
-      [
-        "分清做咩工程", "都係裝修，點知要唔要入圖？",
-        "先問做邊度、做幾大，同有冇掂到結構。一般工程跟 §14(1) 申請。指定嘅 Minor Works（小型工程）有簡化程序。以為係 Exempted Building Works（豁免工程），就查 §41 同個案條件。",
-        "先分清工程類別，先知要搵邊個、開工前要做咩同完工後要交咩。簡化程序嘅工程一樣有安全同資格要求。",
-        "業主話要拆牆。先查幅牆係咪承重，同會唔會影響結構，再答要唔要交圖或行小型工程程序。",
-        ["bo", "minor", "admin"]
-      ],
-      [
-        "批圖則", "§14／§16｜屋宇署先睇設計",
-        "按工程需要搵 Authorized Person (AP，認可人士)、Registered Structural Engineer (RSE，註冊結構工程師) 或 Registered Geotechnical Engineer (RGE，註冊岩土工程師) 交圖。Building Authority (BA，建築事務監督) 按 §14 處理。§16 列明咩情況可以拒絕批圖或准開工。",
-        "Plan Approval（圖則批准）係睇你打算點起。開工之前，仲要核實嗰套圖嘅批准條件，同有冇另外攞到 Consent（開工同意）。",
-        "一個要挖地庫嘅新樓項目，可能要分開睇建築、結構同岩土圖，逐套對返負責人、批咗邊個版本同有咩條件。",
+        "分清文件", "主法例、附屬規例、守則，點樣一齊睇？",
+        "先用 Buildings Ordinance (BO，建築物條例) 搵權力同責任。再睇 Subsidiary Legislation（附屬法例），查手續、技術要求同要交咩。要落手做，就用 Code of Practice（作業守則）同 PNAP（屋宇署畀專業人士嘅作業備考）理解實務做法。",
+        "同一單工程有幾層文件。BO 話你知點解要申請。規例講手續。守則同 PNAP 解釋技術同提交做法。",
+        "想知開工前要唔要攞同意，先睇 §14。想知用邊類表、點交文件，再查 Cap. 123A（《建築物（管理）規例》）同屋宇署指引。",
         ["bo", "admin", "practice"]
       ],
       [
-        "攞開工同意", "§14／§17｜邊一刻先可以開工？",
-        "一般工程要攞到已批圖則同書面 Consent（開工同意）先可以開工。§17 講 BA（建築事務監督）可以喺批圖或准開工時加咩條件。",
-        "批圖嗰陣係睇設計。到真係開工，要再核對用緊邊套圖、邊個負責施工同監督，以及開工條件有冇做到。",
-        "工地想改施工方案。先問負責嘅註冊專業人士要唔要交修訂圖再批，唔好等做完先發現做咗另一套方案。",
-        ["bo", "admin", "practice"]
+        "分清邊個做", "Part 1｜業主請人，邊個對邊樣負責？",
+        "§4 講委任 Authorized Person (AP，認可人士)，並按工程需要委任 Registered Structural Engineer (RSE，註冊結構工程師) 同 Registered Geotechnical Engineer (RGE，註冊岩土工程師)。§9 講 Registered Contractor (RC，註冊承建商) 嘅委任同責任。",
+        "AP 協調工程。結構同岩土工作由有關專業人士按職責負責。承建商負責施工同施工監督。Building Authority (BA，建築事務監督) 按法例作決定，Buildings Department (BD，屋宇署) 處理相關工作。",
+        "例如起一幢有地庫嘅樓，先按工程性質分清邊個負責建築圖、結構圖同岩土圖，再核對負責施工嘅承建商資格。",
+        ["bo", "newWorks", "supervision"]
       ],
       [
-        "完工同入伙", "§21｜新樓幾時可以入伙？",
-        "做完工程要交相應完工證明。新樓一般要等 BA（建築事務監督）發 Occupation Permit (OP，佔用許可證，即入伙紙) 或 Temporary Occupation Permit (TOP，臨時佔用許可證)，先可以入伙。",
-        "完工證明係由負責工程嘅人按規定交。OP 係 BA 按 §21 決定可唔可以用幢新樓。",
-        "如果起樓期間改過圖，就對返現場、已批修訂圖，同 PNAP APP-13（完工同入伙申請指引）要交嘅文件。",
+        "揀工程程序", "Part 2／5｜一般工程、小型工程、豁免工程",
+        "一般 Building Works（建築工程）按 §14(1) 攞批圖同開工同意。符合指定項目並按簡化規定開工嘅 Minor Works（小型工程），睇 §14AA。工程可唔可以豁免，睇 §41 嘅條件。",
+        "同樣叫裝修，程序可以唔同。先問做邊度、做幾大，同有冇掂到結構，再判斷要請邊個同交咩文件。",
+        "業主話要拆牆。先查係咪承重牆、會唔會影響結構同實際工程範圍，再判斷用邊條路。",
+        ["bo", "minor", "worksRoutes"]
+      ],
+      [
+        "批圖同開工", "Part 2｜圖批咗，聽日開唔開得工？",
+        "§14 有兩道關。Plan Approval（圖則批准）係睇你打算點起。Consent（開工同意）係睇可唔可以開工。§16 講咩情況可以拒絕，§17 講批圖或者准開工時可以加咩條件。",
+        "開工前要對清楚你手上係邊個版本嘅圖、准做邊部分，同有冇開工前要先做嘅條件。",
+        "如果工地想改做法，先畀負責嘅專業人士睇使唔使交修訂圖。等要攞嘅批准同意齊先照新方案做。",
+        ["bo", "admin", "newWorks"]
+      ],
+      [
+        "完工同入伙", "Part 2｜起完同可以入伙，相差邊一步？",
+        "工程做完，要按規定交完工證明。新樓一般要等 BA 發 Occupation Permit (OP，佔用許可證，即入伙紙) 或 Temporary Occupation Permit (TOP，臨時佔用許可證)，先可以使用。",
+        "完工證明由有關負責人提交。BA 按 §21 決定發唔發入伙紙。之後如果有 Material Change in Use（樓宇用途有重大改變），再睇 §25 嘅通知要求。",
+        "準備申請 OP 時，先對清楚現場做成點、同已批圖則有冇出入，再按 PNAP APP-13（完工同入伙申請指引）查要交嘅文件。",
         ["bo", "admin", "op"]
       ],
       [
-        "舊樓點跟", "有違建、樓有危險、到期驗樓，點分？",
-        "§24 係用嚟處理 UBW（違例建築工程）。§26 講已經危險或可能變危險嘅樓，§26A 講調查樓宇狀況嘅命令。§30B 係 MBIS（強制驗樓）通知，§30C 係 MWIS（強制驗窗）通知。",
-        "同一幢樓可以同時有幾件事。先睇有冇眼前危險，再逐份命令或通知對返要做嘅工作同限期。",
-        "驗樓途中發現外牆有嘢就嚟跌落街，即時安排保護同通報。同時繼續跟返原本張驗樓通知。",
-        ["bo", "ubw", "mbisScope", "mwisOverview"]
+        "違建同危險", "Part 2／4｜BA 點樣處理工程出問題？",
+        "§24 涉及 Unauthorised Building Works (UBW，違例建築工程)。§26 涉及危險或可能變危險嘅樓宇。§26A 涉及調查樓宇狀況嘅命令。§40 就講邊啲行為可能構成罪行。",
+        "先搞清楚現場有冇即時危險，再分清楚要拆除違建、做修理，定先做調查。",
+        "天台加建物冇入則，先查批准紀錄同適用工程程序，再睇 §24。若果構件出現危險，就要同時處理安全風險。",
+        ["bo", "ubw", "orders"]
+      ],
+      [
+        "唔同意點跟", "Part 5／6｜豁免同上訴各自幾時用？",
+        "Part 5 講 Exemptions（豁免）。§41 有法例訂明嘅豁免，§42 講 BA 可按適用條件行使嘅豁免權力。收到可上訴嘅 BA 決定，就查 Part 6 嘅 §44 及 Appeal Tribunal（上訴審裁團）手續。",
+        "申請豁免要講清楚想豁免邊項要求同理由。想對已作出嘅決定上訴，就要睇決定屬唔屬於可上訴，仲要對實限期。",
+        "例如想就拆卸命令上訴，先查命令同送出決定通知嘅日期。屋宇署指引講明，書面上訴通知要喺決定通知送出後 21 日內送達審裁團秘書。",
+        ["bo", "orders"]
       ]
     ],
     extraTitle: "面試最常再問",
     extras: [
-      ["BA、BD 同 AP 有咩分別？", "Building Authority (BA，建築事務監督) 係法例賦權作決定嘅一方。Buildings Department (BD，屋宇署) 係處理相關工作嘅部門。Authorized Person (AP，認可人士) 係按法例受委任、負責專業工作嘅人。RSE（註冊結構工程師）同 RGE（註冊岩土工程師）按工程需要分別負責結構同岩土。"],
-      ["BO、Code of Practice 同 PNAP 點用？", "問「法例要求咩」，查 BO（建築物條例）同附屬法例。問「實際點做到」，查 Code of Practice（作業守則）。問「屋宇署想我點交」，查 PNAP（作業備考）。"],
-      ["點解有時仲要睇消防同地契？", "起同一幢樓，可能同時涉及消防、規劃同地契。逐樣睇邊個部門負責、要攞咩批准，同埋有冇一件事要等另一件先做到。"]
+      ["BA、BD、AP 有咩分別？", "Building Authority (BA，建築事務監督) 按法例作決定。Buildings Department (BD，屋宇署) 處理相關工作。Authorized Person (AP，認可人士) 係按法例受委任、協調工程同履行專業責任嘅人。"],
+      ["§14、§16、§17 點一齊記？", "§14 問「開工要攞啲咩」，§16 問「有咩理由可以拒絕」，§17 問「可以附加咩條件」。"],
+      ["§24 命令同 §40 罪行有咩分別？", "§24 命令可以要求業主按指定時間拆除或處理有關工程。§40 列出罪行同罰則。答題時先講要處理嘅工程，再查有冇涉及罪行。"]
     ],
     cases: [
-      ["圖則批咗，聽日開唔開得工？", "呢個係一般要跟 §14 嘅工程。業主手上只有已批圖則，你會點做？", ["照已批圖則開工", "查有冇書面 Consent（開工同意）同要先做嘅條件", "做完先補申請"], 1, "我會按 §14 分開核對 Plan Approval（圖則批准）同 Consent（開工同意），再睇委任同開工條件有冇齊。", "張圖批咗，仲要睇有冇正式准你開工。兩份都齊，再對一對有咩條件要先做。"],
-      ["外牆有批盪就嚟跌落街", "幢樓本身做緊 MBIS（強制驗樓）。而家發現有嘢就嚟跌落街，點做先？", ["等驗樓報告交齊", "即時處理危險，同時繼續跟驗樓通知", "只做一次驗窗"], 1, "我會先安排保護措施同通報，再考慮 BO（建築物條例）處理危險樓宇嘅權力，同時跟進 §30B 通知。", "先保護街上嘅人，搵專業人士睇點處理危險位置。驗樓通知亦要繼續跟。"]
+      ["圖則批咗，聽日開唔開得工？", "一般要跟 §14 嘅工程，業主手上有已批圖則。開工前要再查咩？", ["照已批圖則開工", "查書面 Consent（開工同意）同開工條件", "做完先補申請"], 1, "我會按 §14 分開核對 Plan Approval（圖則批准）同 Consent（開工同意），再查適用嘅委任同開工條件。", "張圖批咗，仲要等正式准開工。有寫明開工前要做到嘅事，就逐樣對清楚。"],
+      ["天台有一間加建屋", "查到現有加建同批准紀錄對唔上，懷疑係 UBW（違例建築工程）。應先查邊條處理違建嘅條文？", ["§21 入伙", "§24 違例建築工程", "§44 上訴"], 1, "我會先核實工程同批准紀錄，並查有冇適用嘅簡化程序或豁免。確認涉及違建，再考慮 §24 可採取嘅行動。", "先翻查批准同施工紀錄。如果證實係違建，屋宇署可按 §24 要求處理。"]
     ],
-    refs: ["bo", "admin", "regulation", "minor", "op", "practice", "ubw"],
-    next: ["mbis", "下一課：MBIS（強制驗樓）"]
+    refs: ["bo", "admin", "practice", "newWorks", "minor", "worksRoutes", "supervision", "op", "ubw", "orders"]
   },
   mbis: {
     name: "MBIS（強制驗樓）",

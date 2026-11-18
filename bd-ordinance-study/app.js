@@ -6,11 +6,13 @@ let selectedStep = 0;
 
 const clauseNotes = {
   bo: {
-    1: ["BO §14、§41", "§14 講一般工程點樣攞批圖同開工同意。想知工程有冇豁免，就睇 §41 嘅條件。做 Minor Works（小型工程）就查小型工程簡化程序。"],
-    2: ["BO §14、§16", "§14 講 Plan Approval（圖則批准）同 Consent（開工同意）。§16 講 Building Authority (BA，建築事務監督) 喺咩情況可以拒絕。"],
-    3: ["BO §14、§17", "§14 講批圖同准開工。§17 講 Building Authority (BA，建築事務監督) 批嘅時候可以加咩條件。"],
-    4: ["BO §21", "新樓一般要有 Occupation Permit (OP，入伙紙) 或 Temporary Occupation Permit (TOP，臨時入伙紙) 先可以用。"],
-    5: ["BO §24、§26、§26A、§30B、§30C", "想處理違建，查 §24。有危險樓宇或要調查樓宇狀況，查 §26 或 §26A。驗樓通知查 §30B，驗窗通知查 §30C。"]
+    0: ["BO §2、§38", "§2 係法例嘅字典。§38 係訂立 Regulations（規例）嘅權力來源之一。"],
+    1: ["BO §4、§9", "Part 1 入面，§4 講請邊位註冊專業人士同佢有咩責任。§9 講點委任 Registered Contractor（註冊承建商）同佢要負責咩。"],
+    2: ["BO §14、§14AA、§41", "Part 2 嘅 §14 講一般工程點攞批圖同開工同意，§14AA 講按簡化規定開工嘅 Minor Works（小型工程）。Part 5 嘅 §41 講邊啲情況有法定豁免。"],
+    3: ["BO §14、§16、§17", "呢三條屬於 Part 2（樓宇管制）。§14 講要攞咩批准同同意，§16 講幾時可以拒絕，§17 講可以加咩條件。"],
+    4: ["BO §21、§25", "§21 講新樓幾時可以用，一般要先攞 Occupation Permit (OP，入伙紙) 或 Temporary Occupation Permit (TOP，臨時入伙紙)。§25 講用途有重大改變時要跟嘅要求。"],
+    5: ["BO §24、§26、§26A、§40", "§24 處理違建。有危險樓宇或要調查樓宇狀況，查 §26 或 §26A。§40 係 Part 4（罪行）入面列出罪行同罰則嘅條文。"],
+    6: ["BO §41、§42、§44", "Part 5 嘅 §41 講法定豁免，§42 講 Building Authority（建築事務監督）嘅豁免權力。Part 6 嘅 §44 講就可上訴決定提出 Appeal（上訴）。"]
   },
   mbis: {
     0: ["BO §30B｜MBIS（強制驗樓）", "呢條畀 Building Authority (BA，建築事務監督) 發 Statutory Notice（法定通知），叫業主驗指定部分，有需要就按規定修理。"]
@@ -81,8 +83,9 @@ function practiceCard(item, index) {
 function renderCourse(course) {
   return `${hero(course, current)}
     <div class="metrics">${course.metrics.map(([metric, label]) => `<div class="metric"><strong>${metric}</strong><span>${label}</span></div>`).join("")}</div>
+    ${course.framework ? `<section class="framework">${heading(course.framework.heading)}${studyTable(course.framework)}</section>` : ""}
     <section aria-label="流程圖">
-      ${heading(current === "bo" ? "由畫圖到入伙，再到舊樓" : "由收到通知到做完", "撳每一步，睇邊個做、點解要做")}
+      ${heading(current === "bo" ? "由睇例到落手做" : "由收到通知到做完", "撳每一步，睇邊個做、點解要做")}
       <div class="flow" role="tablist" aria-label="流程步驟" style="--steps:${course.steps.length}">
         ${course.steps.map(([label], i) =>
           `<button class="step" id="step-${i}" type="button" role="tab" aria-selected="${i === selectedStep}" aria-controls="step-detail" tabindex="${i === selectedStep ? 0 : -1}" data-step="${i}"><span class="step-index">${String(i + 1).padStart(2, "0")}</span>${label}</button>`
@@ -97,7 +100,7 @@ function renderCourse(course) {
     <section>${heading("試答面試題", "揀答案之後睇面試同對市民點講")}
       ${course.cases.map(practiceCard).join("")}
     </section>
-    <div class="next"><a href="#${course.next[0]}">${course.next[1]} <span aria-hidden="true">→</span></a></div>`;
+    ${course.next ? `<div class="next"><a href="#${course.next[0]}">${course.next[1]} <span aria-hidden="true">→</span></a></div>` : ""}`;
 }
 
 const comparison = {
