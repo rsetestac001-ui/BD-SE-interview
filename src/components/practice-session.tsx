@@ -78,7 +78,6 @@ export function PracticeSession({
 
   const topic = topics.find((item) => item.id === question.topicId);
   const correct = question.kind === "mcq" && choice && choice === question.answerKey;
-  const wrong = question.kind === "mcq" && revealed && choice && choice !== question.answerKey;
 
   function persist(patch: Parameters<typeof updateItem>[2]) {
     commit(updateItem(store, question.id, patch));
@@ -103,37 +102,6 @@ export function PracticeSession({
     params.set("id", next.id);
     window.history.replaceState(null, "", `/practice?${params.toString()}`);
   }
-
-  const references = (
-    <>
-      <div>
-        <h2 className="text-sm font-medium text-muted-foreground">法理依據</h2>
-        <ul className="mt-2 space-y-3">
-          {question.legalBasis.map((basis) => (
-            <li key={basis.url + basis.label} className="leading-7">
-              <a
-                href={basis.url}
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium underline underline-offset-4"
-              >
-                {basis.label}
-              </a>
-              <p className="text-muted-foreground">{basis.note}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <h2 className="text-sm font-medium text-muted-foreground">常見陷阱</h2>
-        <ul className="mt-1 list-disc space-y-1 pl-5 leading-7">
-          {question.pitfalls.map((pitfall) => (
-            <li key={pitfall}>{pitfall}</li>
-          ))}
-        </ul>
-      </div>
-    </>
-  );
 
   return (
     <article className="mx-auto max-w-2xl space-y-5">
@@ -228,35 +196,18 @@ export function PracticeSession({
 
       {!revealed ? (
         <Button type="button" className="h-11 w-full sm:w-auto" onClick={reveal}>
-          對照示範答案
+          睇答案
         </Button>
       ) : (
         <section className="space-y-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10" aria-live="polite">
           {question.kind === "mcq" && (
             <p className="text-sm font-medium">
-              {choice
-                ? correct
-                  ? "這題你選中了。"
-                  : wrong
-                    ? `示範選項是 ${question.answerKey}。`
-                    : `示範選項是 ${question.answerKey}。`
-                : `你未作選擇。示範選項是 ${question.answerKey}。`}
+              {correct
+                ? "答啱咗。"
+                : `${choice ? "" : "你仲未揀。"}答案係 ${question.answerKey}。`}
             </p>
           )}
-          <div>
-            {!question.studyGuide && (
-              <h2 className="text-sm font-medium text-muted-foreground">示範答法</h2>
-            )}
-            <div className="mt-1">
-              <SpokenAnswer question={question} />
-            </div>
-          </div>
-          {question.studyGuide ? (
-            <details className="space-y-3 rounded-xl bg-muted/60 px-4 py-3">
-              <summary className="cursor-pointer font-medium">睇條文同常見陷阱</summary>
-              {references}
-            </details>
-          ) : references}
+          <SpokenAnswer key={question.id} question={question} />
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               type="button"
