@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/components/use-store";
 import type { Question, Topic } from "@/lib/types";
+import { newPracticeRound, shuffleForRound } from "@/lib/practice-random";
 import { readStore, updateItem } from "@/lib/progress";
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
   initialTopic?: string;
   initialMode?: string;
   initialId?: string;
+  initialRound?: string;
 };
 
 export function PracticeSession({
@@ -25,29 +27,37 @@ export function PracticeSession({
   initialTopic,
   initialMode,
   initialId,
+  initialRound,
 }: Props) {
   const { store, commit } = useStore();
-  const signature = `${initialMode ?? ""}|${initialTopic ?? ""}|${initialId ?? ""}`;
   const [queue, setQueue] = useState<Question[]>([]);
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    let round = initialRound;
+    if (initialMode === "random" && !initialTopic && !round) {
+      const params = new URLSearchParams(window.location.search);
+      round = params.get("round") || newPracticeRound();
+      params.set("round", round);
+      window.history.replaceState(null, "", `/practice?${params.toString()}`);
+    }
+
     const next = buildQueue(questions, readStore(), {
       topic: initialTopic,
       mode: initialMode,
       id: initialId,
-      signature,
+      round,
     });
     const found = initialId ? next.findIndex((item) => item.id === initialId) : 0;
-    /* eslint-disable react-hooks/set-state-in-effect -- session order is stored in the browser */
+    /* eslint-disable react-hooks/set-state-in-effect -- initialize the queue from the current round */
     setQueue(next);
     setIndex(found < 0 ? 0 : found);
     setRevealed(false);
     setLoaded(true);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [questions, initialTopic, initialMode, initialId, signature]);
+  }, [questions, initialTopic, initialMode, initialId, initialRound]);
 
   const question = queue[index];
   const saved = question ? store.items[question.id] : undefined;
@@ -96,9 +106,7 @@ export function PracticeSession({
     setRevealed(false);
     const next = queue[nextIndex];
     if (!next) return;
-    const params = new URLSearchParams();
-    if (initialMode) params.set("mode", initialMode);
-    if (initialTopic) params.set("topic", initialTopic);
+    const params = new URLSearchParams(window.location.search);
     params.set("id", next.id);
     window.history.replaceState(null, "", `/practice?${params.toString()}`);
   }
@@ -301,7 +309,7 @@ function EmptyQueue({ mode, topic }: { mode?: string; topic?: string }) {
 function buildQueue(
   questions: Question[],
   store: ReturnType<typeof useStore>["store"],
-  input: { topic?: string; mode?: string; id?: string; signature: string },
+  input: { topic?: string; mode?: string; id?: string; round?: string },
 ) {
   let list = questions;
   if (input.topic) {
@@ -310,46 +318,11 @@ function buildQueue(
     list = questions.filter((question) => store.items[question.id]?.bookmarked);
   } else if (input.mode === "unfamiliar") {
     list = questions.filter((question) => store.items[question.id]?.status === "unfamiliar");
-  } else if (input.mode === "random") {
-    list = shuffle(questions, hash(input.signature + sessionSeed()));
+  } else if (input.mode === "random" && input.round) {
+    list = shuffleForRound(questions, input.round);
   } else if (input.id) {
     const found = questions.filter((question) => question.id === input.id);
     list = found.length ? found : [];
   }
-  if (input.id && input.mode !== "random" && !input.topic && input.mode !== "bookmarks" && input.mode !== "unfamiliar") {
-    return list;
-  }
   return list;
-}
-
-function sessionSeed() {
-  if (typeof window === "undefined") return "server";
-  const key = "bd-se-random-seed";
-  const existing = window.sessionStorage.getItem(key);
-  if (existing) return existing;
-  const next = String(Date.now());
-  window.sessionStorage.setItem(key, next);
-  return next;
-}
-
-function hash(value: string) {
-  let h = 2166136261;
-  for (let i = 0; i < value.length; i += 1) {
-    h ^= value.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-function shuffle<T>(list: T[], seed: number) {
-  const arr = [...list];
-  let state = seed || 1;
-  for (let i = arr.length - 1; i > 0; i -= 1) {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    const j = state % (i + 1);
-    const swap = arr[i];
-    arr[i] = arr[j];
-    arr[j] = swap;
-  }
-  return arr;
 }

@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { RandomPracticeLink } from "@/components/random-practice-link";
+import { randomPracticePath } from "@/lib/practice-random";
 
 const links = [
   { href: "/", label: "首頁" },
   { href: "/mbis", label: "驗樓" },
   { href: "/statutes", label: "法例" },
   { href: "/affairs", label: "時事" },
-  { href: "/practice?mode=random", label: "隨機" },
+  { href: randomPracticePath, label: "隨機" },
   { href: "/review", label: "複習" },
   { href: "/sources", label: "出處", desktopOnly: true },
 ];
@@ -28,8 +30,9 @@ export function SiteNav({ variant }: { variant: "desktop" | "mobile" }) {
       <nav className="hidden items-center gap-0.5 md:flex" aria-label="主要">
         {items.map((link) => {
           const active = isActive(link.href, pathname);
+          const NavLink = link.href === randomPracticePath ? RandomPracticeLink : Link;
           return (
-            <Link
+            <NavLink
               key={link.href}
               href={link.href}
               aria-current={active ? "page" : undefined}
@@ -38,7 +41,7 @@ export function SiteNav({ variant }: { variant: "desktop" | "mobile" }) {
               }`}
             >
               {link.label}
-            </Link>
+            </NavLink>
           );
         })}
       </nav>
@@ -54,9 +57,10 @@ export function SiteNav({ variant }: { variant: "desktop" | "mobile" }) {
       <ul className="grid grid-cols-6">
         {items.map((link) => {
           const active = isActive(link.href, pathname);
+          const NavLink = link.href === randomPracticePath ? RandomPracticeLink : Link;
           return (
             <li key={link.href}>
-              <Link
+              <NavLink
                 href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={`flex h-14 items-center justify-center text-[13px] ${
@@ -64,7 +68,7 @@ export function SiteNav({ variant }: { variant: "desktop" | "mobile" }) {
                 }`}
               >
                 {link.label}
-              </Link>
+              </NavLink>
             </li>
           );
         })}
