@@ -31,8 +31,13 @@ export type Question = {
   prompt: string;
   options?: Choice[];
   answerKey?: string;
+  keyPoint: string;
   modelAnswer: string;
   roles?: RolePerspective[];
+  studyGuide?: {
+    followUp: string;
+    followUpAnswer: string;
+  };
   legalBasis: Basis[];
   pitfalls: string[];
 };

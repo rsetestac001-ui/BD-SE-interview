@@ -104,6 +104,37 @@ export function PracticeSession({
     window.history.replaceState(null, "", `/practice?${params.toString()}`);
   }
 
+  const references = (
+    <>
+      <div>
+        <h2 className="text-sm font-medium text-muted-foreground">法理依據</h2>
+        <ul className="mt-2 space-y-3">
+          {question.legalBasis.map((basis) => (
+            <li key={basis.url + basis.label} className="leading-7">
+              <a
+                href={basis.url}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium underline underline-offset-4"
+              >
+                {basis.label}
+              </a>
+              <p className="text-muted-foreground">{basis.note}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <h2 className="text-sm font-medium text-muted-foreground">常見陷阱</h2>
+        <ul className="mt-1 list-disc space-y-1 pl-5 leading-7">
+          {question.pitfalls.map((pitfall) => (
+            <li key={pitfall}>{pitfall}</li>
+          ))}
+        </ul>
+      </div>
+    </>
+  );
+
   return (
     <article className="mx-auto max-w-2xl space-y-5">
       <div className="flex flex-wrap items-center gap-2">
@@ -213,37 +244,19 @@ export function PracticeSession({
             </p>
           )}
           <div>
-            <h2 className="text-sm font-medium text-muted-foreground">示範答法</h2>
+            {!question.studyGuide && (
+              <h2 className="text-sm font-medium text-muted-foreground">示範答法</h2>
+            )}
             <div className="mt-1">
-              <SpokenAnswer text={question.modelAnswer} roles={question.roles} />
+              <SpokenAnswer question={question} />
             </div>
           </div>
-          <div>
-            <h2 className="text-sm font-medium text-muted-foreground">法理依據</h2>
-            <ul className="mt-2 space-y-3">
-              {question.legalBasis.map((basis) => (
-                <li key={basis.url + basis.label} className="leading-7">
-                  <a
-                    href={basis.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium underline underline-offset-4"
-                  >
-                    {basis.label}
-                  </a>
-                  <p className="text-muted-foreground">{basis.note}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h2 className="text-sm font-medium text-muted-foreground">常見陷阱</h2>
-            <ul className="mt-1 list-disc space-y-1 pl-5 leading-7">
-              {question.pitfalls.map((pitfall) => (
-                <li key={pitfall}>{pitfall}</li>
-              ))}
-            </ul>
-          </div>
+          {question.studyGuide ? (
+            <details className="space-y-3 rounded-xl bg-muted/60 px-4 py-3">
+              <summary className="cursor-pointer font-medium">睇條文同常見陷阱</summary>
+              {references}
+            </details>
+          ) : references}
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               type="button"
