@@ -6,18 +6,18 @@ let selectedStep = 0;
 
 const clauseNotes = {
   bo: {
-    1: ["BO §14、§41", "§14 訂明一般工程的批准及同意關卡。§41 載有若干豁免及簡化安排的法例依據，適用時要逐項核對。"],
-    2: ["BO §14、§16", "§14 訂立圖則批准及開工同意要求。§16 列出 BA 可以拒絕批准或同意的理由。"],
-    3: ["BO §14、§17", "§14 講批准及同意。§17 配合條文表列項目，規定 BA 可施加哪些條件。"],
-    4: ["BO §21", "控制新樓何時可以佔用。實務上要核對 OP／TOP、完工證明同修訂圖則。"],
-    5: ["BO §24、§26、§26A、§30B、§30C", "違例工程、危險樓宇、勘測同強制檢驗各有法定路線。先辨認觸發點，再對應命令或通知。"]
+    1: ["BO §14、§41", "§14 講一般工程點樣攞批圖同開工同意。想知工程有冇豁免，就睇 §41 嘅條件。做 Minor Works（小型工程）就查小型工程簡化程序。"],
+    2: ["BO §14、§16", "§14 講 Plan Approval（圖則批准）同 Consent（開工同意）。§16 講 Building Authority (BA，建築事務監督) 喺咩情況可以拒絕。"],
+    3: ["BO §14、§17", "§14 講批圖同准開工。§17 講 Building Authority (BA，建築事務監督) 批嘅時候可以加咩條件。"],
+    4: ["BO §21", "新樓一般要有 Occupation Permit (OP，入伙紙) 或 Temporary Occupation Permit (TOP，臨時入伙紙) 先可以用。"],
+    5: ["BO §24、§26、§26A、§30B、§30C", "想處理違建，查 §24。有危險樓宇或要調查樓宇狀況，查 §26 或 §26A。驗樓通知查 §30B，驗窗通知查 §30C。"]
   },
   mbis: {
-    0: ["BO §30B｜強制驗樓", "賦權 BA 發通知，要求業主就指定部分安排訂明檢驗同所需修葺。"]
+    0: ["BO §30B｜MBIS（強制驗樓）", "呢條畀 Building Authority (BA，建築事務監督) 發 Statutory Notice（法定通知），叫業主驗指定部分，有需要就按規定修理。"]
   },
   mwis: {
-    0: ["BO §30C｜強制驗窗", "賦權 BA 發通知，要求業主就指定窗戶安排訂明檢驗同所需修葺。"],
-    5: ["BO §40(1BD)｜不遵從驗窗通知", "係無合理辯解下不遵從驗窗通知嘅相關罪行條文。屋宇署表格頁另有 FPN1 定額罰款爭議表格。"]
+    0: ["BO §30C｜MWIS（強制驗窗）", "呢條畀 Building Authority (BA，建築事務監督) 發 Statutory Notice（法定通知），叫業主驗指定窗戶，有需要就按規定修理。"],
+    5: ["BO §40(1BD)｜冇跟驗窗通知", "呢條講冇合理原因唔跟驗窗通知嘅罪行。如果想就 Fixed Penalty（定額罰款）提出爭議，可以到屋宇署表格頁搵 FPN1（爭議罰款表格）。"]
   }
 };
 
@@ -51,11 +51,11 @@ function stepDetail(course, index) {
   return `<p class="eyebrow">${String(index + 1).padStart(2, "0")} / ${label}</p>
     <h3>${title}</h3><p>${explanation}</p>
     <div class="detail-grid">
-      <div><div class="detail-label">背後原理</div><p>${principle}</p></div>
-      <div><div class="detail-label">實務點用</div><p>${example}</p></div>
-    </div>${branch ? `<div class="repair-branches" aria-label="修葺分流">
-      <button type="button" class="source-chip" data-jump="${branch[0]}">毋須修葺 → 查看提交</button>
-      <button type="button" class="source-chip" data-jump="${branch[1]}">${current === "mbis" ? "需要修葺 → 查看監督" : "需要修葺 → 查看修葺簽證"}</button>
+      <div><div class="detail-label">點解要咁做？</div><p>${principle}</p></div>
+      <div><div class="detail-label">遇到呢個情況點做？</div><p>${example}</p></div>
+    </div>${branch ? `<div class="repair-branches" aria-label="修理同交表">
+      <button type="button" class="source-chip" data-jump="${branch[0]}">唔使整 → 睇點交表</button>
+      <button type="button" class="source-chip" data-jump="${branch[1]}">${current === "mbis" ? "要整 → 睇邊個跟" : "要整 → 睇邊個簽表"}</button>
     </div>` : ""}${sources(refs, clauseNotes[current]?.[index])}`;
 }
 
@@ -82,7 +82,7 @@ function renderCourse(course) {
   return `${hero(course, current)}
     <div class="metrics">${course.metrics.map(([metric, label]) => `<div class="metric"><strong>${metric}</strong><span>${label}</span></div>`).join("")}</div>
     <section aria-label="流程圖">
-      ${heading(current === "bo" ? "樓宇一生點樣受規管？" : "由通知到遵從", "按步驟睇角色、判斷同文件")}
+      ${heading(current === "bo" ? "由畫圖到入伙，再到舊樓" : "由收到通知到做完", "撳每一步，睇邊個做、點解要做")}
       <div class="flow" role="tablist" aria-label="流程步驟" style="--steps:${course.steps.length}">
         ${course.steps.map(([label], i) =>
           `<button class="step" id="step-${i}" type="button" role="tab" aria-selected="${i === selectedStep}" aria-controls="step-detail" tabindex="${i === selectedStep ? 0 : -1}" data-step="${i}"><span class="step-index">${String(i + 1).padStart(2, "0")}</span>${label}</button>`
@@ -94,7 +94,7 @@ function renderCourse(course) {
     <section>${heading(course.extraTitle)}
       <div class="accordion">${course.extras.map(([question, answer]) => `<details><summary>${question}</summary><p>${answer}</p></details>`).join("")}</div>
     </section>
-    <section>${heading("情境練習", "作答後睇面試答法同市民版")}
+    <section>${heading("試答面試題", "揀答案之後睇面試同對市民點講")}
       ${course.cases.map(practiceCard).join("")}
     </section>
     <div class="next"><a href="#${course.next[0]}">${course.next[1]} <span aria-hidden="true">→</span></a></div>`;
@@ -102,23 +102,23 @@ function renderCourse(course) {
 
 const comparison = {
   name:"驗樓／驗窗對照", eyebrow:"MBIS × MWIS", title:"驗樓／驗窗對照",
-  intro:"見到一張通知，先認條號、睇範圍、對資格，再計時限。由同一幢樓嘅角度一次過比較兩套制度。"
+  intro:"同一幢樓可以收到兩張信。一張叫你驗樓，一張叫你驗窗。用下面張表對清楚每張信要搵邊個、做啲咩同幾時做完。"
 };
 function renderComparison() {
   return hero(comparison, "compare") + heading("一張表對清兩套制度") + studyTable({
-    columns:["比較項目","MBIS 強制驗樓","MWIS 強制驗窗"],
+    columns:["要睇咩","MBIS（強制驗樓）","MWIS（強制驗窗）"],
     rows:[
-      ["法定通知","BO §30B","BO §30C"],
-      ["樓齡門檻","30 年或以上","10 年或以上"],
-      ["住用樓宇例外","三層或以下","三層或以下"],
-      ["範圍","通知指定公用部分、外牆、伸出物或招牌等","通知指定個別處所或公用部分窗戶"],
-      ["檢驗及修葺監督","RI","QP"],
-      ["誰做所需修葺","具相應資格的註冊承建商","具相應資格的註冊承建商，合資格 QP 可兼任"],
-      ["通常期限｜公用","5 個月委任／9 個月驗／24 個月修","9 個月內委任、驗及完成所需修葺"],
-      ["通常期限｜個別","3 個月委任／6 個月驗／12 個月修","6 個月內委任、驗及完成所需修葺"],
-      ["指定表格","MBI3a（毋須修葺），或 MBI3 及 MBI4（需要修葺）","WI1（同一 QP 或毋須修葺），或 WI2 及 WI3（分開委任）"],
-      ["完成後再發通知","同一部分，前次通知日期起最少 10 年","同一窗戶，前次通知日期起最少 5 年"]
-    ], note:"時限由法定通知日期起計。再次發同一範圍嘅通知，要先符合上一份通知已獲遵從嘅前提。"
+      ["Statutory Notice（法定通知）","BO（建築物條例）§30B","BO（建築物條例）§30C"],
+      ["樓有幾舊先適用？","30 年或以上","10 年或以上"],
+      ["邊類住用樓除外？","三層或以下","三層或以下"],
+      ["驗邊度？","通知寫明嘅公用部分、外牆、伸出物或招牌等","通知寫明嘅單位窗或大廈公用窗"],
+      ["邊個驗同睇住修？","RI（註冊檢驗人員）","QP（合資格人士）"],
+      ["邊個落手整？","RC（合資格嘅註冊承建商）","RC（合資格嘅註冊承建商）。QP 有所需承建商資格可以兼做"],
+      ["公用部分通常有幾耐？","5 個月搵人／9 個月驗完／24 個月整完（如需要）","9 個月內搵人、驗完同整好（如需要）"],
+      ["個別處所通常有幾耐？","3 個月搵人／6 個月驗完／12 個月整完（如需要）","6 個月內搵人、驗完同整好（如需要）"],
+      ["用邊張表？","MBI3a（唔使整）或 MBI3 同 MBI4（要整）","WI1（同一 QP 或唔使整）或 WI2 同 WI3（分開搵兩位 QP）"],
+      ["做完後，隔幾耐先可再發？","同一部分，由上一次通知日期起最少 10 年","同一扇窗，由上一次通知日期起最少 5 年"]
+    ], note:"由通知上面嘅日期開始計。要再發同一範圍嘅通知，要先跟妥上一份。"
   }) + sources(["mbisTime","mwisOverview","mbisForms","mwisForms"]) +
     '<div class="next"><a href="#bo">返到 BO 框架 <span aria-hidden="true">→</span></a></div>';
 }
