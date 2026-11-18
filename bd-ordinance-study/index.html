@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#102820">
+<title>BO 建築法規研習室</title>
+<link rel="stylesheet" href="style.css">
+<script src="content.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到課程</a>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="#bo"><span class="brand-mark" aria-hidden="true">▥</span><span>BD 面試研習室<small>BUILDING CONTROL</small></span></a>
+    <nav aria-label="課程">
+      <p class="nav-caption">研習導覽</p>
+      <a href="#bo" data-route="bo"><span class="nav-key">BO</span><span>建築物條例<small>法例框架</small></span></a>
+      <a href="#mbis" data-route="mbis"><span class="nav-key">MB</span><span>強制驗樓<small>MBIS 流程</small></span></a>
+      <a href="#mwis" data-route="mwis"><span class="nav-key">MW</span><span>強制驗窗<small>MWIS 流程</small></span></a>
+      <a class="compare-link" href="#compare" data-route="compare"><span class="nav-key" aria-hidden="true">⇄</span><span>驗樓／驗窗對照</span></a>
+    </nav>
+    <div class="sidebar-foot"><span class="signal" aria-hidden="true"></span> 香港建築物規管 <span>Cap. 123</span></div>
+  </aside>
+  <main id="main" tabindex="-1">
+    <header class="topbar"><div><span>研習室</span><span class="slash">/</span><strong id="crumb"></strong></div><button type="button" class="text-button" id="source-button">官方依據 <span aria-hidden="true">↗</span></button></header>
+    <div id="page" class="main-content"></div>
+  </main>
+</div>
+<dialog id="reference-dialog" aria-labelledby="reference-title">
+  <div class="dialog-head"><h2 id="reference-title">官方依據</h2><form method="dialog"><button type="submit" aria-label="關閉視窗">×</button></form></div>
+  <div id="reference-content"></div>
+</dialog>
+</body>
+</html>
