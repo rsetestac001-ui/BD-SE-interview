@@ -1,3 +1,4 @@
+import { AnswerTimeline } from "@/components/answer-timeline";
 import type { Question } from "@/lib/types";
 
 export function SpokenAnswer({ question }: { question: Question }) {
@@ -9,6 +10,7 @@ export function SpokenAnswer({ question }: { question: Question }) {
         <p className="text-sm font-medium">一句入腦 · 面試可以咁答</p>
         <p><strong>{keyPoint}</strong></p>
       </div>
+      <AnswerTimeline questionId={question.id} />
       <details className="rounded-xl bg-muted/40 px-4 py-3">
         <summary className="cursor-pointer font-medium">睇完整答法同原因</summary>
         <div className="mt-3 space-y-3">

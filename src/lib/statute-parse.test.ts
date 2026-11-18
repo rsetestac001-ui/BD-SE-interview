@@ -144,3 +144,22 @@ test("every question has its own short takeaway", () => {
     seen.add(keyPoint);
   }
 });
+
+test("each bank question has a complete answer timeline", () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
+  const readData = (name: string) => JSON.parse(readFileSync(join(root, "data", name), "utf8"));
+  const questions = readData("questions.json") as { id: string }[];
+  const timelines = readData("answer-timelines.json") as Record<string, {
+    kind: string;
+    steps: { label: string; text: string }[];
+  }>;
+
+  assert.deepEqual(Object.keys(timelines).sort(), questions.map(({ id }) => id).sort());
+
+  for (const [id, { kind, steps }] of Object.entries(timelines)) {
+    assert.ok(kind === "sequence" || kind === "explanation", id);
+    assert.ok(steps.length >= 2, id);
+    assert.equal(new Set(steps.map(({ label }) => label)).size, steps.length, id);
+    assert.ok(steps.every(({ label, text }) => label.trim() && text.trim()), id);
+  }
+});
