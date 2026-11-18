@@ -1,26 +1,27 @@
 import principlesJson from "../../data/answer-principles.json";
 import { AnswerTimeline } from "@/components/answer-timeline";
-import type { Question } from "@/lib/types";
+import { StatuteText } from "@/components/statute-text";
+import type { Basis, Question } from "@/lib/types";
 
 const principles: Partial<Record<string, string>> = principlesJson;
 
 export function SpokenAnswer({ question }: { question: Question }) {
-  const { keyPoint, modelAnswer, roles, studyGuide } = question;
+  const { keyPoint, legalBasis, modelAnswer, roles, studyGuide } = question;
   const principle = principles[question.id];
 
   return (
     <div className="space-y-3">
       <div className="rounded-xl border-l-4 border-primary bg-primary/10 px-4 py-3 leading-7">
         <p className="text-sm font-medium">一句入腦 · 面試可以咁答</p>
-        <p><strong>{keyPoint}</strong></p>
+        <p><strong><StatuteText text={keyPoint} legalBasis={legalBasis} /></strong></p>
       </div>
       {principle && (
         <div className="rounded-xl bg-muted/50 px-4 py-3 leading-7">
           <p className="text-sm font-semibold">背後原理</p>
-          <p>{principle}</p>
+          <p><StatuteText text={principle} legalBasis={legalBasis} /></p>
         </div>
       )}
-      <AnswerTimeline questionId={question.id} />
+      <AnswerTimeline questionId={question.id} legalBasis={legalBasis} />
       <details className="rounded-xl bg-muted/40 px-4 py-3">
         <summary className="cursor-pointer font-medium">睇完整答法同原因</summary>
         <div className="mt-3 space-y-3">
@@ -32,15 +33,15 @@ export function SpokenAnswer({ question }: { question: Question }) {
                 className="space-y-2 rounded-xl bg-background p-3 ring-1 ring-foreground/10"
               >
                 <h3 className="text-base leading-7 font-semibold">{role.heading}</h3>
-                <p className="leading-8 whitespace-pre-wrap">{role.answer}</p>
+                <p className="leading-8 whitespace-pre-wrap"><StatuteText text={role.answer} legalBasis={legalBasis} /></p>
                 <p className="leading-8 whitespace-pre-wrap rounded-lg bg-muted/60 px-3 py-2">
                   <strong>點解：</strong>
-                  {role.why}
+                  <StatuteText text={role.why} legalBasis={legalBasis} />
                 </p>
               </section>
             ))
           ) : (
-            <AnswerText text={modelAnswer} />
+            <AnswerText text={modelAnswer} legalBasis={legalBasis} />
           )}
         </div>
       </details>
@@ -50,15 +51,8 @@ export function SpokenAnswer({ question }: { question: Question }) {
           <ul className="space-y-2 leading-7">
             {question.legalBasis.map((basis) => (
               <li key={basis.url + basis.label}>
-                <a
-                  className="font-medium underline underline-offset-4"
-                  href={basis.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {basis.label}
-                </a>
-                <p className="text-muted-foreground">{basis.note}</p>
+                <StatuteText text={basis.label} legalBasis={legalBasis} sourceUrl={basis.url} />
+                <p className="text-muted-foreground"><StatuteText text={basis.note} legalBasis={legalBasis} /></p>
               </li>
             ))}
           </ul>
@@ -66,7 +60,7 @@ export function SpokenAnswer({ question }: { question: Question }) {
             <div>
               <p className="font-medium">容易講錯</p>
               <ul className="mt-1 list-disc space-y-1 pl-5 leading-7">
-                {question.pitfalls.map((pitfall) => <li key={pitfall}>{pitfall}</li>)}
+                {question.pitfalls.map((pitfall) => <li key={pitfall}><StatuteText text={pitfall} legalBasis={legalBasis} /></li>)}
               </ul>
             </div>
           )}
@@ -75,10 +69,10 @@ export function SpokenAnswer({ question }: { question: Question }) {
       {studyGuide && (
         <div className="space-y-2 rounded-xl bg-muted/60 px-4 py-3 leading-7">
           <h3 className="font-semibold">面試追問</h3>
-          <p>{studyGuide.followUp}</p>
+          <p><StatuteText text={studyGuide.followUp} legalBasis={legalBasis} /></p>
           <details>
             <summary className="cursor-pointer font-medium underline underline-offset-4">睇追問答法</summary>
-            <p className="mt-2">{studyGuide.followUpAnswer}</p>
+            <p className="mt-2"><StatuteText text={studyGuide.followUpAnswer} legalBasis={legalBasis} /></p>
           </details>
         </div>
       )}
@@ -86,20 +80,20 @@ export function SpokenAnswer({ question }: { question: Question }) {
   );
 }
 
-function AnswerText({ text }: { text: string }) {
+function AnswerText({ text, legalBasis }: { text: string; legalBasis: readonly Basis[] }) {
   const marker = "\n\n點解：";
   const splitAt = text.indexOf(marker);
   if (splitAt < 0) {
-    return <p className="leading-8 whitespace-pre-wrap">{text}</p>;
+    return <p className="leading-8 whitespace-pre-wrap"><StatuteText text={text} legalBasis={legalBasis} /></p>;
   }
   const spoken = text.slice(0, splitAt);
   const reason = text.slice(splitAt + marker.length);
   return (
     <div className="space-y-3 leading-8">
-      <p className="whitespace-pre-wrap">{spoken}</p>
+      <p className="whitespace-pre-wrap"><StatuteText text={spoken} legalBasis={legalBasis} /></p>
       <p className="whitespace-pre-wrap rounded-lg bg-muted/60 px-3 py-2">
         <strong>點解：</strong>
-        {reason}
+        <StatuteText text={reason} legalBasis={legalBasis} />
       </p>
     </div>
   );
