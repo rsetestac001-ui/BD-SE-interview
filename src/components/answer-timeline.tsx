@@ -1,5 +1,8 @@
 import timelinesJson from "../../data/answer-timelines.json";
 
+import { StatuteText } from "@/components/statute-text";
+import type { Basis } from "@/lib/types";
+
 type TimelineStep = { label: string; text: string };
 
 type Timeline = {
@@ -10,7 +13,7 @@ type Timeline = {
 
 const timelines = timelinesJson as Partial<Record<string, Timeline>>;
 
-export function AnswerTimeline({ questionId }: { questionId: string }) {
+export function AnswerTimeline({ questionId, legalBasis }: { questionId: string; legalBasis: readonly Basis[] }) {
   const timeline = timelines[questionId];
   if (!timeline) return null;
 
@@ -23,21 +26,21 @@ export function AnswerTimeline({ questionId }: { questionId: string }) {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <section className="min-w-0 rounded-lg bg-background p-3" aria-label="屋宇署人員">
             <h3 className="font-semibold">屋宇署人員</h3>
-            <TimelineSteps steps={timeline.steps} />
+            <TimelineSteps steps={timeline.steps} legalBasis={legalBasis} />
           </section>
           <section className="min-w-0 rounded-lg bg-background p-3" aria-label="普通市民">
             <h3 className="font-semibold">普通市民</h3>
-            <TimelineSteps steps={timeline.citizenSteps} />
+            <TimelineSteps steps={timeline.citizenSteps} legalBasis={legalBasis} />
           </section>
         </div>
       ) : (
-        <TimelineSteps steps={timeline.steps} />
+        <TimelineSteps steps={timeline.steps} legalBasis={legalBasis} />
       )}
     </details>
   );
 }
 
-function TimelineSteps({ steps }: { steps: TimelineStep[] }) {
+function TimelineSteps({ steps, legalBasis }: { steps: TimelineStep[]; legalBasis: readonly Basis[] }) {
   return (
     <ol className="mt-4 ml-3 space-y-4 border-l border-primary/30 pl-5" role="list">
       {steps.map((step, index) => (
@@ -48,8 +51,8 @@ function TimelineSteps({ steps }: { steps: TimelineStep[] }) {
           >
             {index + 1}
           </span>
-          <p className="font-semibold">{step.label}</p>
-          <p>{step.text}</p>
+          <p className="font-semibold"><StatuteText text={step.label} legalBasis={legalBasis} /></p>
+          <p><StatuteText text={step.text} legalBasis={legalBasis} /></p>
         </li>
       ))}
     </ol>
