@@ -145,21 +145,31 @@ test("every question has its own short takeaway", () => {
   }
 });
 
-test("each bank question has a complete answer timeline", () => {
+test("each bank question has timelines for its answer roles", () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
   const readData = (name: string) => JSON.parse(readFileSync(join(root, "data", name), "utf8"));
-  const questions = readData("questions.json") as { id: string }[];
+  const questions = readData("questions.json") as {
+    id: string;
+    roles?: { id: string }[];
+  }[];
+  type Step = { label: string; text: string };
   const timelines = readData("answer-timelines.json") as Record<string, {
     kind: string;
-    steps: { label: string; text: string }[];
+    steps: Step[];
+    citizenSteps?: Step[];
   }>;
 
   assert.deepEqual(Object.keys(timelines).sort(), questions.map(({ id }) => id).sort());
 
-  for (const [id, { kind, steps }] of Object.entries(timelines)) {
+  for (const { id, roles } of questions) {
+    const { kind, steps, citizenSteps } = timelines[id];
     assert.ok(kind === "sequence" || kind === "explanation", id);
-    assert.ok(steps.length >= 2, id);
-    assert.equal(new Set(steps.map(({ label }) => label)).size, steps.length, id);
-    assert.ok(steps.every(({ label, text }) => label.trim() && text.trim()), id);
+    assert.equal(Boolean(citizenSteps), Boolean(roles?.some((role) => role.id === "citizen")), id);
+
+    for (const track of citizenSteps ? [steps, citizenSteps] : [steps]) {
+      assert.ok(track.length >= 2, id);
+      assert.equal(new Set(track.map(({ label }) => label)).size, track.length, id);
+      assert.ok(track.every(({ label, text }) => label.trim() && text.trim()), id);
+    }
   }
 });
