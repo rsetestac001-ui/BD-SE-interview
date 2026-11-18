@@ -14,7 +14,7 @@ export default function BoLearningPage() {
           <h1 className="text-2xl font-semibold">BO / MBIS / MWIS 互動學習地圖</h1>
           <p className="mt-2 text-sm text-muted-foreground">點擊流程、理解背後原理，再用情境題練習。</p>
         </div>
-        <Link href="/mbis" className="rounded-lg border px-3 py-2 text-sm hover:bg-muted">詳細 MBIS 筆記 →</Link>
+        <div className="flex flex-wrap gap-2">\n          <Link href="/case-simulator" className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">開始 Case Simulator →</Link>\n          <Link href="/mbis" className="rounded-lg border px-3 py-2 text-sm hover:bg-muted">詳細 MBIS 筆記 →</Link>\n        </div>
       </div>
       <iframe
         title="BO MBIS MWIS 互動教學"
