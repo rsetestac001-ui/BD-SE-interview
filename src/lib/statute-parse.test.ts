@@ -173,3 +173,22 @@ test("each bank question has timelines for its answer roles", () => {
     }
   }
 });
+
+test("each bank question has its own practical explanation", () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
+  const questions = JSON.parse(readFileSync(join(root, "data/questions.json"), "utf8")) as {
+    id: string;
+    keyPoint: string;
+  }[];
+  const principles = JSON.parse(readFileSync(join(root, "data/answer-principles.json"), "utf8")) as
+    Record<string, string>;
+
+  assert.deepEqual(Object.keys(principles).sort(), questions.map(({ id }) => id).sort());
+  assert.equal(new Set(Object.values(principles)).size, questions.length);
+
+  for (const { id, keyPoint } of questions) {
+    const principle = principles[id].trim();
+    assert.ok(principle && !principle.includes("\n"), id);
+    assert.notEqual(principle, keyPoint.trim(), id);
+  }
+});

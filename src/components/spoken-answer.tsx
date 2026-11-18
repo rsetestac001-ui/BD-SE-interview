@@ -1,8 +1,12 @@
+import principlesJson from "../../data/answer-principles.json";
 import { AnswerTimeline } from "@/components/answer-timeline";
 import type { Question } from "@/lib/types";
 
+const principles: Partial<Record<string, string>> = principlesJson;
+
 export function SpokenAnswer({ question }: { question: Question }) {
   const { keyPoint, modelAnswer, roles, studyGuide } = question;
+  const principle = principles[question.id];
 
   return (
     <div className="space-y-3">
@@ -10,6 +14,12 @@ export function SpokenAnswer({ question }: { question: Question }) {
         <p className="text-sm font-medium">一句入腦 · 面試可以咁答</p>
         <p><strong>{keyPoint}</strong></p>
       </div>
+      {principle && (
+        <div className="rounded-xl bg-muted/50 px-4 py-3 leading-7">
+          <p className="text-sm font-semibold">背後原理</p>
+          <p>{principle}</p>
+        </div>
+      )}
       <AnswerTimeline questionId={question.id} />
       <details className="rounded-xl bg-muted/40 px-4 py-3">
         <summary className="cursor-pointer font-medium">睇完整答法同原因</summary>
