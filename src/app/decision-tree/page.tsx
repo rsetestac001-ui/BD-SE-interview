@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { StatuteExplainer } from "@/components/statute-explainer";
 
 type Choice = { text: string; next: string; good: boolean; feedback: string };
 type Node = { title: string; situation: string; principle: string; law: string; choices: Choice[] };
@@ -78,10 +79,12 @@ export default function DecisionTreePage() {
   const [last, setLast] = useState<Choice | null>(null);
   const [role, setRole] = useState<"officer" | "citizen">("officer");
   const [errors, setErrors] = useState(0);
+  const [correct, setCorrect] = useState(0);
+  const [attempts, setAttempts] = useState(0);
   const active = scenarios[scenario];
   const node = active.nodes[nodeId];
-  function switchScenario(index: number) { setScenario(index); setNodeId(scenarios[index].start); setHistory([]); setLast(null); setErrors(0); }
-  function choose(option: Choice) { setHistory(h => [...h, nodeId]); setNodeId(option.next); setLast(option); if (!option.good) setErrors(n => n + 1); }
+  function switchScenario(index: number) { setScenario(index); setNodeId(scenarios[index].start); setHistory([]); setLast(null); setErrors(0); setCorrect(0); setAttempts(0); }
+  function choose(option: Choice) { setHistory(h => [...h, nodeId]); setNodeId(option.next); setLast(option); setAttempts(n => n + 1); if (option.good) setCorrect(n => n + 1); else setErrors(n => n + 1); }
   function back() { const prev = history[history.length - 1]; if (!prev) return; setNodeId(prev); setHistory(h => h.slice(0, -1)); setLast(null); }
   return (
     <article className="mx-auto max-w-3xl space-y-5">
@@ -89,12 +92,12 @@ export default function DecisionTreePage() {
       <div className="grid gap-2 sm:grid-cols-3">{scenarios.map((s, i) => <button key={s.name} onClick={() => switchScenario(i)} aria-pressed={i === scenario} className={`rounded-xl border p-3 text-left text-sm ${i === scenario ? "border-primary bg-primary/10 font-semibold" : "hover:bg-muted"}`}>{s.name}</button>)}</div>
       <section className="rounded-xl border bg-card p-4 sm:p-6">
         <p className="text-sm text-muted-foreground">{active.description}</p>
-        <div className="my-4 flex items-center justify-between text-xs text-muted-foreground"><span>已走 {history.length} 步</span><span>錯誤分支 {errors} 次</span></div>
+        <div className="my-4 flex items-center justify-between text-xs text-muted-foreground"><span>已走 {history.length} 步</span><span>正確 {correct}/{attempts} · 錯誤分支 {errors} 次</span></div>
         <h2 className="text-xl font-semibold">{node.title}</h2><p className="my-3 leading-7">{node.situation}</p>
         <div className="space-y-2">{node.choices.map((choice, i) => <button key={i} onClick={() => choose(choice)} className="w-full rounded-xl border p-3 text-left leading-7 hover:bg-muted"><span className="mr-2 font-semibold">{String.fromCharCode(65 + i)}.</span>{choice.text}</button>)}</div>
-        {node.choices.length === 0 && <div className="rounded-xl bg-muted p-4"><strong>✓ 本個案完成</strong><p className="mt-2 text-sm">你曾走入 {errors} 次錯誤分支。可以重新練習其他選擇。</p></div>}
+        {node.choices.length === 0 && <div className="rounded-xl bg-muted p-4"><strong>✓ 本個案完成</strong><p className="mt-2 text-sm">決策準確率：{attempts ? Math.round(correct / attempts * 100) : 0}%（{correct}/{attempts}）。曾走入 {errors} 次錯誤分支。</p><p className="mt-2 text-sm">評分只計每次選擇是否走入合理分支，唔等於真實 BD 面試評分。</p></div>}
         {last && <div className={`mt-4 rounded-xl border p-3 text-sm leading-7 ${last.good ? "border-emerald-500/40" : "border-amber-500/40"}`} role="status"><strong>{last.good ? "✓ 上一步方向正確" : "⚠ 上一步有風險"}</strong><p>{last.feedback}</p></div>}
-        <div className="mt-4 rounded-xl bg-muted p-4 text-sm leading-7"><p><strong>背後原理：</strong>{node.principle}</p><p className="mt-2"><strong>相關法例線索：</strong>{node.law}</p><a className="underline underline-offset-4" href="https://www.elegislation.gov.hk/hk/cap123" target="_blank" rel="noopener noreferrer">查閱 Cap.123 官方條文 ↗</a></div>
+        <div className="mt-4 rounded-xl bg-muted p-4 text-sm leading-7"><p><strong>背後原理：</strong>{node.principle}</p><p className="mt-2"><strong>相關法例線索：</strong>{node.law}</p><a className="underline underline-offset-4" href="https://www.elegislation.gov.hk/hk/cap123" target="_blank" rel="noopener noreferrer">查閱 Cap.123 官方條文 ↗</a><StatuteExplainer references={node.law} /></div>
         <div className="mt-4 flex justify-between gap-2"><button disabled={!history.length} onClick={back} className="rounded-lg border px-4 py-2 disabled:opacity-40">← 上一步</button><button onClick={() => switchScenario(scenario)} className="rounded-lg border px-4 py-2">重新開始</button></div>
       </section>
       <section className="space-y-3 rounded-xl border p-4"><h2 className="text-lg font-semibold">面試答法</h2><div className="flex gap-2"><button onClick={() => setRole("officer")} aria-pressed={role === "officer"} className={`rounded-lg border px-3 py-2 ${role === "officer" ? "bg-primary text-primary-foreground" : ""}`}>BD Officer</button><button onClick={() => setRole("citizen")} aria-pressed={role === "citizen"} className={`rounded-lg border px-3 py-2 ${role === "citizen" ? "bg-primary text-primary-foreground" : ""}`}>普通市民</button></div><p className="rounded-lg bg-muted p-4 leading-8">{role === "officer" ? active.officer : active.citizen}</p></section>
