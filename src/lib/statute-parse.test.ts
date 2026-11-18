@@ -128,3 +128,19 @@ test("every bank label yields the same parent sections from both parsers", () =>
     }
   }
 });
+
+test("every question has its own short takeaway", () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
+  const questions = JSON.parse(readFileSync(join(root, "data/questions.json"), "utf8")) as Array<{
+    id: string;
+    keyPoint?: string;
+  }>;
+  const seen = new Set<string>();
+
+  for (const question of questions) {
+    const keyPoint = question.keyPoint?.trim();
+    assert.ok(keyPoint && !keyPoint.includes("\n"), question.id);
+    assert.ok(!seen.has(keyPoint), question.id);
+    seen.add(keyPoint);
+  }
+});

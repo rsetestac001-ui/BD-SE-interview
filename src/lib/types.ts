@@ -31,10 +31,10 @@ export type Question = {
   prompt: string;
   options?: Choice[];
   answerKey?: string;
+  keyPoint: string;
   modelAnswer: string;
   roles?: RolePerspective[];
   studyGuide?: {
-    takeaway: string;
     followUp: string;
     followUpAnswer: string;
   };

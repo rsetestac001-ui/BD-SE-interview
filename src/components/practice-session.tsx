@@ -248,11 +248,7 @@ export function PracticeSession({
               <h2 className="text-sm font-medium text-muted-foreground">示範答法</h2>
             )}
             <div className="mt-1">
-              <SpokenAnswer
-                text={question.modelAnswer}
-                roles={question.roles}
-                studyGuide={question.studyGuide}
-              />
+              <SpokenAnswer question={question} />
             </div>
           </div>
           {question.studyGuide ? (
