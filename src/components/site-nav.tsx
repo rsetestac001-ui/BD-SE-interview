@@ -8,6 +8,7 @@ import { randomPracticePath } from "@/lib/practice-random";
 const links = [
   { href: "/", label: "首頁" },
   { href: "/mbis", label: "驗樓" },
+  { href: "/bo-learning", label: "地圖" },
   { href: "/statutes", label: "法例" },
   { href: "/affairs", label: "時事" },
   { href: randomPracticePath, label: "隨機" },
@@ -54,7 +55,7 @@ export function SiteNav({ variant }: { variant: "desktop" | "mobile" }) {
       aria-label="流動版主要"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="grid grid-cols-6">
+      <ul className="grid grid-cols-7">
         {items.map((link) => {
           const active = isActive(link.href, pathname);
           const NavLink = link.href === randomPracticePath ? RandomPracticeLink : Link;
