@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 const jumps = [
+  { href: "#flow", label: "流程速記" },
   { href: "#start", label: "怎樣起動" },
   { href: "#people", label: "誰負責" },
   { href: "#scope", label: "範圍" },
@@ -52,6 +53,22 @@ export default function MbisPage() {
           </a>
         ))}
       </nav>
+
+      <section id="flow" className="scroll-mt-24 space-y-3">
+        <h2 className="text-xl font-semibold">由揀樓到辦妥，一口氣講晒</h2>
+        <ol className="list-decimal space-y-2 pl-5 leading-7">
+          <li><strong>揀樓、預先知會。</strong> 署方按風險揀樓，預早畀業主準備。</li>
+          <li><strong>送達法定通知。</strong> 睇清楚邊個收信、要驗邊度，同委任、檢驗、修葺嘅限期。</li>
+          <li><strong>搵註冊檢驗人員驗樓。</strong> MBI1記錄委任。驗完交報告，MBI3代表有需要做訂明修葺，MBI3a代表毋須做。</li>
+          <li><strong>有需要就修。</strong> 合適嘅註冊承建商施工，註冊檢驗人員監督，修好交MBI4同完工報告。</li>
+          <li><strong>查遵從狀況。</strong> 署方按資料跟進，亦會抽查。限期過咗仍未遵從，就核實原因同進度，按情況執法。</li>
+        </ol>
+        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+          <Link className="underline underline-offset-4" href="/practice?topic=mbis&id=q135">練習講一次完整流程</Link>
+          <Link className="underline underline-offset-4" href="/practice?topic=mbis&id=q145">練習睇表格</Link>
+          <a className="underline underline-offset-4" href="https://www.bd.gov.hk/tc/resources/forms/form_mbis.html">屋宇署指明表格</a>
+        </div>
+      </section>
 
       <section id="start" className="scroll-mt-24 space-y-3">
         <h2 className="text-xl font-semibold">法定通知才起動</h2>

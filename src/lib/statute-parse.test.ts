@@ -85,7 +85,7 @@ test("scenario answers that need both roles keep one citation list", () => {
   }>;
   const excluded = new Set(["q01", "q02", "q05", "q07", "q09", "q11", "q13", "q59", "q60"]);
   let existing = 0;
-  let added = 0;
+  let originalOfficerSet = 0;
   for (const question of questions) {
     const number = Number(question.id.slice(1));
     const expectsRoles = question.kind === "scenario" && !excluded.has(question.id);
@@ -108,11 +108,11 @@ test("scenario answers that need both roles keep one citation list", () => {
     assert.ok(question.roles[1].why.length > 15, question.id);
     assert.ok(!("legalBasis" in question.roles[0]) && !("legalBasis" in question.roles[1]));
     assert.ok(question.legalBasis.length > 0);
-    if (number >= 87) added += 1;
-    else existing += 1;
+    if (number < 87) existing += 1;
+    else if (number <= 134) originalOfficerSet += 1;
   }
   assert.equal(existing, 54);
-  assert.equal(added, 48);
+  assert.equal(originalOfficerSet, 48);
 });
 
 test("every bank label yields the same parent sections from both parsers", () => {
