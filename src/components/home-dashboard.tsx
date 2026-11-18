@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Bookmark, Building2, Shuffle } from "lucide-react";
+import { RandomPracticeLink } from "@/components/random-practice-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +30,7 @@ export function HomeDashboard() {
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button
             className="h-11"
-            render={<Link href="/practice?mode=random" />}
+            render={<RandomPracticeLink />}
           >
             <Shuffle />
             隨機一題

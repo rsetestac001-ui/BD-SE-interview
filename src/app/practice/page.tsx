@@ -6,6 +6,7 @@ type Query = {
   topic?: string | string[];
   mode?: string | string[];
   id?: string | string[];
+  round?: string | string[];
 };
 
 function first(value: string | string[] | undefined) {
@@ -37,6 +38,7 @@ async function PracticeLoader({
       initialTopic={first(query.topic)}
       initialMode={first(query.mode)}
       initialId={first(query.id)}
+      initialRound={first(query.round)}
     />
   );
 }
