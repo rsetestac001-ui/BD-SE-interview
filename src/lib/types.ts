@@ -33,6 +33,11 @@ export type Question = {
   answerKey?: string;
   modelAnswer: string;
   roles?: RolePerspective[];
+  studyGuide?: {
+    takeaway: string;
+    followUp: string;
+    followUpAnswer: string;
+  };
   legalBasis: Basis[];
   pitfalls: string[];
 };

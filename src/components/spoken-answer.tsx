@@ -1,15 +1,26 @@
-import type { RolePerspective } from "@/lib/types";
+import type { Question } from "@/lib/types";
 
 export function SpokenAnswer({
   text,
   roles,
+  studyGuide,
 }: {
   text: string;
-  roles?: RolePerspective[];
+  roles?: Question["roles"];
+  studyGuide?: Question["studyGuide"];
 }) {
   if (roles && roles.length > 0) {
     return (
       <div className="space-y-3">
+        {studyGuide && (
+          <>
+            <div className="rounded-xl bg-primary/10 px-4 py-3 leading-7">
+              <p className="text-sm font-medium">一句入腦</p>
+              <p className="font-semibold">{studyGuide.takeaway}</p>
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">30 秒口語答法</p>
+          </>
+        )}
         {roles.map((role) => (
           <section
             key={role.id}
@@ -24,6 +35,16 @@ export function SpokenAnswer({
             </p>
           </section>
         ))}
+        {studyGuide && (
+          <div className="space-y-2 rounded-xl bg-muted/60 px-4 py-3 leading-7">
+            <h3 className="font-semibold">面試追問</h3>
+            <p>{studyGuide.followUp}</p>
+            <details>
+              <summary className="cursor-pointer font-medium underline underline-offset-4">睇追問答法</summary>
+              <p className="mt-2">{studyGuide.followUpAnswer}</p>
+            </details>
+          </div>
+        )}
       </div>
     );
   }
