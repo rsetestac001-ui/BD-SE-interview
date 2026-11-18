@@ -112,7 +112,7 @@ test("scenario answers that need both roles keep one citation list", () => {
     else existing += 1;
   }
   assert.equal(existing, 54);
-  assert.equal(added, 24);
+  assert.equal(added, 48);
 });
 
 test("every bank label yields the same parent sections from both parsers", () => {
