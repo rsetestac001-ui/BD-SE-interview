@@ -89,7 +89,7 @@ export default function CaseSimulator() {
         <p className="text-sm font-medium text-muted-foreground">BD Interview · 互動訓練</p>
         <h1 className="text-3xl font-semibold">BD Officer Case Simulator</h1>
         <p className="leading-7 text-muted-foreground">唔係背條文，而係扮演 BD 個案主任：收到投訴、揀法定途徑、跟進執法、判斷幾時結案。每一步即時解釋背後原理。</p>
-        <Link href="/bo-learning" className="inline-block rounded-lg border px-3 py-2 text-sm hover:bg-muted">← 返回 BO 架構地圖</Link>
+        <div className="flex flex-wrap gap-2">\n          <Link href="/bo-learning" className="inline-block rounded-lg border px-3 py-2 text-sm hover:bg-muted">← 返回 BO 架構地圖</Link>\n          <Link href="/decision-tree" className="inline-block rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">進階：分支決策樹 →</Link>\n        </div>
       </header>
       <div className="grid gap-2 sm:grid-cols-3" aria-label="選擇個案">
         {cases.map((item, i) => (
