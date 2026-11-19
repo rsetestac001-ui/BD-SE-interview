@@ -125,9 +125,14 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   border-left: 2px solid #bdd1c9;
 }
 .provision-number, .provision-copy > strong { font-weight: 750; color: var(--green); }
-.provision-tree > .provision-branch > .provision-number {
-  width: fit-content;
+.provision-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 5px;
+}
+.provision-caption > .provision-number {
+  width: fit-content;
   padding: 2px 8px;
   border-radius: 5px;
   background: #1e493e;
@@ -139,6 +144,54 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   color: #214572;
   font-weight: 750;
   line-height: 1.45;
+}
+.provision-caption .provision-heading { margin: 0; }
+.favorite-heart {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font: 24px/1 system-ui, sans-serif;
+}
+.favorite-heart::before { content: "♡"; }
+.favorite-heart:hover { background: #fbeef0; }
+.favorite-heart[aria-pressed="true"] {
+  background: #fbeef0;
+  color: #a22142;
+}
+.favorite-heart[aria-pressed="true"]::before { content: "♥"; }
+.favorites { max-width: 760px; }
+.favorites-intro { color: var(--muted); margin-bottom: 18px; }
+.favorites-status:not(:empty) { color: #a22142; margin-bottom: 12px; }
+.favorites-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.favorite-entry {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.favorite-entry-head { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
+.favorite-entry h2 { font-size: 1.15rem; margin: 2px 0 8px; }
+.favorite-pinpoint { color: var(--green); font-weight: 750; font-size: .9rem; }
+.favorite-note { display: grid; gap: 4px; margin-top: 12px; font-weight: 700; }
+.favorite-note textarea {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #9bab9e;
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
+}
+.favorite-note textarea:focus-visible { outline: 2px solid #268364; outline-offset: 2px; }
+@media (max-width: 700px) {
+  .sidebar nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 .provision-copy p { line-height: 1.8; }
 .provision-legend {

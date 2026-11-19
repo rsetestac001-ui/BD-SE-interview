@@ -7,15 +7,79 @@ let referenceWindowSerial = 0;
 let referenceWindowLayer = 20;
 let current = "bo";
 let selectedStep = 0;
+const favoritesStorageKey = "bd-ordinance-study:favorites:v1";
+let favorites = readFavorites();
+let favoritesStorageError = false;
 
 function boText(value) {
-  if (current !== "bo") return value;
+  if (current !== "bo" && current !== "favorites") return value;
   return value
     .replace(/\bPart\s+(\d+[A-Z]*)\b/g, "第 $1 部")
     .replace(/\bSchedule\s+(\d+)\b/g, "附表 $1")
     .replace(/§\s*(\d+[A-Za-z]*(?:\([\da-zA-Z]+\))*)(?:[–-](\([\da-zA-Z]+\)))?/g,
       (_, section, end) => end ? `第 ${section} 至 ${end} 條` : `第 ${section} 條`)
     .replace(/條[–-]第/g, "條至第");
+}
+
+function readFavorites() {
+  try {
+    const entries = JSON.parse(localStorage.getItem(favoritesStorageKey) ?? "[]");
+    return new Map(entries.filter(([key, entry]) => entry &&
+      Object.hasOwn(boPlainProvisions, entry.section) &&
+      typeof entry.path === "string" && key === entry.section + entry.path &&
+      typeof entry.saved === "boolean" && typeof entry.note === "string"));
+  } catch {
+    return new Map();
+  }
+}
+
+function persistFavorites() {
+  try {
+    localStorage.setItem(favoritesStorageKey, JSON.stringify([...favorites]));
+    favoritesStorageError = false;
+  } catch {
+    favoritesStorageError = true;
+  }
+}
+
+function favoriteLabel(section, path) {
+  return boText(section + path.replace(" 至 ", "–"));
+}
+
+function favoriteTitle(section, path) {
+  const headings = boProvisionHeadings[section];
+  return (path ? headings?.[path.replace(" 至 ", "-")] : typeof headings === "string" && headings) ||
+    boPlainProvisions[section][1];
+}
+
+function renderFavoriteButton(section, path = "") {
+  const key = section + path;
+  return `<button type="button" class="favorite-heart" data-favorite-key="${escapeText(key)}" data-favorite-section="${escapeText(section)}" data-favorite-path="${escapeText(path)}" aria-label="收藏 ${escapeText(favoriteLabel(section, path))}" aria-pressed="${Boolean(favorites.get(key)?.saved)}"></button>`;
+}
+
+function renderFavorites() {
+  const entries = [...favorites].filter(([, entry]) => entry.saved).reverse();
+  return `<section class="favorites" aria-labelledby="favorites-title">
+    <h1 id="favorites-title" tabindex="-1">收藏</h1>
+    <p class="favorites-intro">收藏同備註會儲喺目前呢個瀏覽器。備註會自動儲存。</p>
+    <p class="favorites-status" role="status">${favoritesStorageError ? "暫時儲存唔到。重新載入前，請先複製備註。" : ""}</p>
+    ${entries.length ? `<ul class="favorites-list">${entries.map(([key, { section, path, note }]) => `<li class="favorite-entry">
+      <div class="favorite-entry-head">
+        <div><p class="favorite-pinpoint">${escapeText(favoriteLabel(section, path))}</p>
+        <h2>${escapeText(favoriteTitle(section, path))}</h2></div>
+        ${renderFavoriteButton(section, path)}
+      </div>
+      <button type="button" class="source-chip" data-favorite-open="${escapeText(key)}" aria-haspopup="dialog">睇返條文</button>
+      <label class="favorite-note">備註<textarea rows="3" data-favorite-note="${escapeText(key)}" placeholder="例如：呢款同第 17 條點樣一齊睇？">
+${escapeText(note)}</textarea></label>
+    </li>`).join("")}</ul>` : `<div class="favorite-entry"><p>暫時未有收藏。開任何條文，撳款項旁邊嘅愛心，就會喺呢度見到。</p><a href="#bo">去 BO 條文</a></div>`}
+  </section>`;
+}
+
+function syncFavoriteHearts() {
+  for (const heart of document.querySelectorAll("[data-favorite-key]")) {
+    heart.setAttribute("aria-pressed", String(Boolean(favorites.get(heart.dataset.favoriteKey)?.saved)));
+  }
 }
 
 const clauseNotes = {
@@ -215,16 +279,17 @@ function setRoute(moveFocus = false) {
   }
   linkedReferenceWindows.clear();
   const hash = location.hash.slice(1);
-  current = [...Object.keys(courses), "compare"].includes(hash) ? hash : "bo";
+  current = [...Object.keys(courses), "compare", "favorites"].includes(hash) ? hash : "bo";
   selectedStep = 0;
   const course = courses[current] ?? comparison;
-  document.querySelector("#crumb").textContent = course.name;
-  document.title = `${course.title}｜BD 面試研習室`;
+  document.querySelector("#crumb").textContent = current === "favorites" ? "收藏" : course.name;
+  document.title = `${current === "favorites" ? "收藏" : course.title}｜BD 面試研習室`;
   for (const link of navigation) {
     if (link.dataset.route === current) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   }
-  page.innerHTML = current === "compare" ? renderComparison() : renderCourse(course);
+  page.innerHTML = current === "favorites" ? renderFavorites()
+    : current === "compare" ? renderComparison() : renderCourse(course);
   if (moveFocus) {
     window.scrollTo(0, 0);
     document.querySelector("#main").focus({ preventScroll:true });
@@ -645,7 +710,7 @@ function renderProvisionText(text) {
   return html + escapeText(value.slice(offset));
 }
 
-function renderProvisionTree(entries, headings) {
+function renderProvisionTree(entries, headings, section) {
   const root = { items: [], children: new Map() };
   for (const { label, title, text } of entries) {
     const [number, qualifier = ""] = label.split("｜");
@@ -682,10 +747,12 @@ function renderProvisionTree(entries, headings) {
     const label = isSubsection ? `第 ${item.number} 款` : item.number;
     const heading = isSubsection ? headings?.[item.number.replace(" 至 ", "-")] : "";
     const path = parentPath + item.number;
-    return `<li class="provision-branch" data-provision-path="${escapeText(path)}"><div class="provision-number">${escapeText(label)}</div>${heading ? renderProvisionHeading(heading) : ""}<ol role="list">${renderItems(item.items, depth + 1, path)}</ol></li>`;
+    const number = `<div class="provision-number">${escapeText(label)}</div>`;
+    const caption = isSubsection ? `<div class="provision-caption">${number}${renderFavoriteButton(section, path)}</div>` : number;
+    return `<li class="provision-branch" data-provision-path="${escapeText(path)}">${caption}${heading ? renderProvisionHeading(heading) : ""}<ol role="list">${renderItems(item.items, depth + 1, path)}</ol></li>`;
   }).join("");
   const introduction = typeof headings === "string"
-    ? `<li>${renderProvisionHeading(headings)}</li>` : "";
+    ? `<li class="provision-caption">${renderProvisionHeading(headings)}${renderFavoriteButton(section)}</li>` : "";
   return `<ol class="provision-tree" role="list">${introduction}${renderItems(root.items, 0)}</ol>`;
 }
 
@@ -750,7 +817,7 @@ function expandClause(clause, open = false) {
   return `${clause === "§21" ? renderOccupationGuide() : ""}<details class="clause-more" data-quiz-provision="${escapeText(root)}"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
     <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
     <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">專業詞</li></ul>
-    ${renderProvisionTree(details.filter(({ label }) => include(label)), headings)}</details>`;
+    ${renderProvisionTree(details.filter(({ label }) => include(label)), headings, root)}</details>`;
 }
 
 function renderFlowClauses(clauses) {
@@ -772,9 +839,60 @@ function showFrameworkSections(rowIndex) {
   showFrameworkDialog(details.title, content, details.ref);
 }
 
+document.addEventListener("click", event => {
+  const heart = event.target.closest("[data-favorite-key]");
+  if (!heart) return;
+  const { favoriteKey: key, favoriteSection: section, favoritePath: path } = heart.dataset;
+  favorites = readFavoritesOrKeep();
+  const previous = favorites.get(key);
+  const saved = !previous?.saved;
+  const note = previous?.note ?? "";
+  if (saved || note) favorites.set(key, { section, path, saved, note });
+  else favorites.delete(key);
+  persistFavorites();
+  if (current === "favorites") {
+    const removedFromList = page.contains(heart);
+    page.innerHTML = renderFavorites();
+    if (removedFromList) document.querySelector("#favorites-title").focus({ preventScroll: true });
+  }
+  syncFavoriteHearts();
+  if (favoritesStorageError && !page.contains(heart)) heart.title = "暫時儲存唔到，收藏只會保留到離開呢頁為止";
+});
+
+function readFavoritesOrKeep() {
+  return favoritesStorageError ? favorites : readFavorites();
+}
+
+page.addEventListener("input", event => {
+  const key = event.target.dataset.favoriteNote;
+  if (!key) return;
+  favorites = readFavoritesOrKeep();
+  const entry = favorites.get(key);
+  if (!entry) return;
+  favorites.set(key, { ...entry, note: event.target.value });
+  persistFavorites();
+  page.querySelector(".favorites-status").textContent = favoritesStorageError ? "備註暫時儲存唔到，離開前請先複製。" : "";
+});
+
+window.addEventListener("storage", event => {
+  if (event.key !== favoritesStorageKey && event.key !== null) return;
+  favorites = readFavoritesOrKeep();
+  if (current === "favorites" && !document.activeElement.matches("[data-favorite-note]")) {
+    page.innerHTML = renderFavorites();
+  }
+  syncFavoriteHearts();
+});
+
 page.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
+  if (button.dataset.favoriteOpen) {
+    const entry = favorites.get(button.dataset.favoriteOpen);
+    if (!entry) return;
+    openProvision(entry.section);
+    if (entry.path) primaryReferenceWindow.jumpToSubsection(entry.path);
+    return;
+  }
   if (button.dataset.boProvision) {
     openProvision(button.dataset.boProvision);
     return;
