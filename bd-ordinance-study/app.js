@@ -90,10 +90,44 @@ function practiceCard(item, index) {
   </div></details>`;
 }
 
+function renderBoFlowchart() {
+  const node = (key) => {
+    const [title, clauses] = boFlow[key];
+    return `<button type="button" class="bo-flow-node" data-bo-flow="${key}" aria-haspopup="dialog">
+      <strong>${title}</strong><small>${clauses}</small>
+    </button>`;
+  };
+  const arrow = '<span class="bo-flow-arrow" aria-hidden="true">↓</span>';
+  return `<section class="bo-flowchart" aria-label="BO 框架流程圖">
+    ${heading("BO 框架流程圖", "撳任何一格，睇條文重點")}
+    <div class="bo-flow-board">
+      <div class="bo-flow-main" role="group" aria-label="由確認工程到完工">
+        ${node("definition")}${arrow}
+        ${node("people")}${arrow}
+        ${node("choose")}${arrow}
+        <div class="bo-flow-fork" role="group" aria-label="三種開工程序">
+          ${["standard", "minor", "exempt"].map(key => `<div>${node(key)}</div>`).join("")}
+        </div>
+        ${arrow}${node("complete")}
+      </div>
+      <div class="bo-flow-lookup">
+        <h3>工程出事或收到決定，查邊度？</h3>
+        <div class="bo-flow-grid">
+          ${["orders", "procedure", "offences", "appeals"].map(node).join("")}
+        </div>
+        <h3>遇到放寬、舊例或過渡個案</h3>
+        <div class="bo-flow-grid">
+          ${["modification", "transitional", "saving", "minorTransition"].map(node).join("")}
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
 function renderCourse(course) {
   return `${hero(course, current)}
     <div class="metrics">${course.metrics.map(([metric, label]) => `<div class="metric"><strong>${metric}</strong><span>${label}</span></div>`).join("")}</div>
-    ${course.framework ? `<section class="framework">${heading(course.framework.heading)}${studyTable(course.framework)}</section>` : ""}
+    ${course.framework ? `${renderBoFlowchart()}<section class="framework">${heading(course.framework.heading)}${studyTable(course.framework)}</section>` : ""}
     <section aria-label="流程圖">
       ${heading(current === "bo" ? "由睇例到落手做" : "由收到通知到做完", "撳每一步，睇邊個做、點解要做")}
       <div class="flow" role="tablist" aria-label="流程步驟" style="--steps:${course.steps.length}">
@@ -196,6 +230,11 @@ function showFrameworkSections(rowIndex) {
 page.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
+  if (button.dataset.boFlow) {
+    const [title, clauses, meaning] = boFlow[button.dataset.boFlow];
+    showFrameworkDialog(title, `<section class="reference-item"><p class="detail-label">${clauses}</p><p>${meaning}</p></section>`);
+    return;
+  }
   if (button.dataset.frameworkClause) {
     const clause = button.dataset.frameworkClause;
     const [label, meaning] = boHighlights[clause];
