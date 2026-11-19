@@ -254,8 +254,13 @@ function createReferenceWindow(dialog) {
   const referenceTitle = dialog.querySelector(".dialog-title");
   const referenceContent = dialog.querySelector(".dialog-body");
   const quizButton = dialog.querySelector(".dialog-quiz-button");
+  const referenceOrigin = document.createElement("div");
+  referenceOrigin.className = "reference-origin";
+  referenceOrigin.hidden = true;
+  referenceContent.before(referenceOrigin);
   let dialogDrag;
   let quizState;
+  let origin;
 
   function raise() {
     if (dialog.classList.contains("floating")) dialog.style.zIndex = ++referenceWindowLayer;
@@ -279,12 +284,14 @@ function createReferenceWindow(dialog) {
   }
 
   function jumpToSubsection(number, scope = referenceContent) {
-    const details = [...scope.querySelectorAll(".clause-more")].find(item =>
-      [...item.querySelectorAll("[data-provision-number]")].some(node => node.dataset.provisionNumber === number));
-    const target = details && [...details.querySelectorAll("[data-provision-number]")]
-      .find(item => item.dataset.provisionNumber === number);
+    const branches = [...scope.querySelectorAll("[data-provision-path]")];
+    let target;
+    while (number && !target) {
+      target = branches.find(node => node.dataset.provisionPath === number);
+      number = number.slice(0, Math.max(0, number.lastIndexOf("(")));
+    }
     if (!target) return;
-    details.open = true;
+    target.closest(".clause-more").open = true;
     target.tabIndex = -1;
     target.focus({ preventScroll: true });
     referenceContent.scrollTop += target.getBoundingClientRect().top - referenceContent.getBoundingClientRect().top - 10;
@@ -292,11 +299,72 @@ function createReferenceWindow(dialog) {
 
   dialog.addEventListener("pointerdown", raise);
   dialog.addEventListener("focusin", raise);
+  referenceOrigin.addEventListener("click", event => {
+    if (event.target.closest("[data-reference-parent]")) {
+      if (!returnToOrigin()) referenceOrigin.hidden = true;
+    }
+  });
+
+  function setOrigin(next) {
+    origin = next;
+    referenceOrigin.hidden = !origin;
+    referenceOrigin.replaceChildren();
+    if (!origin) return;
+    const back = document.createElement("button");
+    back.type = "button";
+    back.className = "source-chip";
+    back.dataset.referenceParent = "";
+    back.textContent = `← 返回 ${origin.label}`;
+    referenceOrigin.append(back);
+    if (origin.sentence) {
+      const quote = document.createElement("p");
+      quote.textContent = origin.sentence;
+      referenceOrigin.append(quote);
+    }
+    keepDialogInView();
+  }
+
+  function captureOrigin(trigger) {
+    const section = trigger.closest("[data-quiz-provision]")?.dataset.quizProvision ??
+      trigger.closest(".occupation-guide")?.nextElementSibling?.dataset.quizProvision;
+    const paragraph = trigger.closest("p, li, h4, strong");
+    let sentence = "";
+    if (paragraph) {
+      const before = document.createRange();
+      before.selectNodeContents(paragraph);
+      before.setEndBefore(trigger);
+      const after = document.createRange();
+      after.selectNodeContents(paragraph);
+      after.setStartAfter(trigger);
+      const trim = text => text.replace(/\s+/g, " ").trim();
+      const lead = trim(before.toString()).split(/[。！？]/).at(-1);
+      const rest = trim(after.toString()).split(/(?<=[。！？])/)[0];
+      sentence = `「${lead.length > 40 ? "…" + lead.slice(-40) : lead}${trigger.textContent}${rest.length > 45 ? rest.slice(0, 45) + "…" : rest}」`;
+    }
+    const path = trigger.closest("[data-provision-path]")?.dataset.provisionPath;
+    return { controller, trigger, scrollTop: referenceContent.scrollTop,
+      label: section ? boText(section + (path && /^(?:\([\dA-Za-z]+\))+$/.test(path) ? path : "")) : referenceTitle.textContent,
+      sentence };
+  }
+
+  function restoreOrigin({ trigger, scrollTop }) {
+    if (!dialog.open || !referenceContent.contains(trigger)) return false;
+    raise();
+    referenceContent.scrollTop = scrollTop;
+    trigger.focus({ preventScroll: true });
+    return true;
+  }
+
+  function returnToOrigin() {
+    return origin?.controller.restoreOrigin(origin);
+  }
+
   function showReferences(keys, clause = null) {
     if (dialog.open) dialog.close();
     quizButton.hidden = true;
     quizButton.setAttribute("aria-expanded", "false");
     quizState = undefined;
+    setOrigin();
     dialog.classList.remove("floating");
     dialog.style.left = "";
     dialog.style.top = "";
@@ -316,8 +384,8 @@ function createReferenceWindow(dialog) {
     }
     dialog.classList.add("floating");
     referenceTitle.textContent = boText(title);
-    const back = parent ? `<button type="button" class="source-chip reference-parent" data-reference-parent>返回 ${escapeText(parent.title())}</button>` : "";
-    referenceContent.innerHTML = back + content +
+    setOrigin();
+    referenceContent.innerHTML = content +
       `<div class="source-row"><a href="${references[ref][2]}" target="_blank" rel="noopener noreferrer">睇 Cap. 123 官方條文 ↗</a></div>`;
     const keys = [...new Set([...referenceContent.querySelectorAll("[data-quiz-provision]")].map(node => node.dataset.quizProvision))];
     quizState = undefined;
@@ -460,19 +528,13 @@ function createReferenceWindow(dialog) {
       openLinkedProvision(cross.dataset.referenceClause, controller, cross);
       return;
     }
-    const back = event.target.closest("[data-reference-parent]");
-    if (back) {
-      if (controller.parent?.dialog.open && controller.trigger?.isConnected) controller.parent.focus();
-      else back.hidden = true;
-      return;
-    }
     const jump = event.target.closest("[data-occupation-jump]");
     if (jump) jumpToSubsection(jump.dataset.occupationJump, jump.closest(".occupation-guide").parentElement);
   });
 
   const controller = {
     dialog, keepDialogInView, showReferences, showFrameworkDialog, jumpToSubsection,
-    title: () => referenceTitle.textContent,
+    captureOrigin, restoreOrigin, setOrigin, returnToOrigin,
     hasProvision: clause => quizState?.keys.length === 1 && quizState.keys[0] === clause,
     focus() { raise(); referenceTitle.focus({ preventScroll: true }); }
   };
@@ -491,15 +553,17 @@ function openProvision(clause, referenceWindow = primaryReferenceWindow) {
 
 function openLinkedProvision(reference, parent, trigger) {
   const [clause] = reference.match(/^§[0-9]+[A-Z]*|^Schedule [0-9]+/);
-  const subsection = reference.slice(clause.length).match(/^\([0-9]+[A-Z]*\)/)?.[0];
+  const subsection = reference.slice(clause.length).match(/^(?:\([\dA-Za-z]+\))+/)?.[0];
   const existing = parent.hasProvision(clause) ? parent
     : primaryReferenceWindow.hasProvision(clause) && primaryReferenceWindow.dialog.open ? primaryReferenceWindow
     : linkedReferenceWindows.get(clause);
   if (existing?.dialog.open) {
+    if (existing !== parent) existing.setOrigin(parent.captureOrigin(trigger));
     existing.focus();
     if (subsection) existing.jumpToSubsection(subsection);
     return;
   }
+  const origin = parent.captureOrigin(trigger);
   const dialog = referenceTemplate.cloneNode(true);
   const id = `linked-reference-${++referenceWindowSerial}`;
   dialog.id = id;
@@ -512,14 +576,14 @@ function openLinkedProvision(reference, parent, trigger) {
   document.body.append(dialog);
   const referenceWindow = createReferenceWindow(dialog);
   referenceWindow.parent = parent;
-  referenceWindow.trigger = trigger;
   linkedReferenceWindows.set(clause, referenceWindow);
   dialog.addEventListener("close", () => {
     if (linkedReferenceWindows.get(clause) === referenceWindow) linkedReferenceWindows.delete(clause);
     dialog.remove();
-    if (parent.dialog.open && trigger.isConnected) trigger.focus({ preventScroll: true });
+    referenceWindow.returnToOrigin();
   });
   openProvision(clause, referenceWindow);
+  referenceWindow.setOrigin(origin);
   referenceWindow.focus();
   if (subsection) referenceWindow.jumpToSubsection(subsection);
 }
@@ -610,14 +674,15 @@ function renderProvisionTree(entries, headings) {
     }
     node.items.push({ text, description });
   }
-  const renderItems = (items, depth) => items.map(item => {
+  const renderItems = (items, depth, parentPath = "") => items.map(item => {
     if (!item.items) {
       return `<li class="provision-copy">${item.description ? `<strong>${renderProvisionText(item.description)}</strong>` : ""}<p>${renderProvisionText(item.text)}</p></li>`;
     }
     const isSubsection = depth === 0 && /^\(\d/.test(item.number);
     const label = isSubsection ? `第 ${item.number} 款` : item.number;
     const heading = isSubsection ? headings?.[item.number.replace(" 至 ", "-")] : "";
-    return `<li class="provision-branch"${depth === 0 ? ` data-provision-number="${escapeText(item.number)}"` : ""}><div class="provision-number">${escapeText(label)}</div>${heading ? renderProvisionHeading(heading) : ""}<ol role="list">${renderItems(item.items, depth + 1)}</ol></li>`;
+    const path = parentPath + item.number;
+    return `<li class="provision-branch" data-provision-path="${escapeText(path)}"><div class="provision-number">${escapeText(label)}</div>${heading ? renderProvisionHeading(heading) : ""}<ol role="list">${renderItems(item.items, depth + 1, path)}</ol></li>`;
   }).join("");
   const introduction = typeof headings === "string"
     ? `<li>${renderProvisionHeading(headings)}</li>` : "";
