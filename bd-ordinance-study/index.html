@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#102820">
 <title>BO 建築法規研習室</title>
-<link rel="stylesheet" href="style.css?v=9e5523bb5708">
+<link rel="stylesheet" href="style.css?v=9b8a14acdba8">
 <script src="content.js?v=25df6643b229" defer></script>
 <script src="bo-plain.js?v=60d407c2e8b2" defer></script>
-<script src="app.js?v=4950bc6188e8" defer></script>
+<script src="bo-quiz.js?v=64df569889d2" defer></script>
+<script src="app.js?v=cca16abd12ec" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">跳到課程</a>
@@ -30,7 +31,7 @@
   </main>
 </div>
 <dialog id="reference-dialog" aria-labelledby="reference-title">
-  <div class="dialog-head"><h2 id="reference-title">官方依據</h2><form method="dialog"><button type="submit" aria-label="關閉視窗">×</button></form></div>
+  <div class="dialog-head"><h2 id="reference-title">官方依據</h2><div class="dialog-actions"><button type="button" id="reference-quiz-button" aria-expanded="false" aria-controls="reference-quiz" hidden>小測試</button><form method="dialog"><button type="submit" aria-label="關閉視窗">×</button></form></div></div>
   <div id="reference-content"></div>
 </dialog>
 </body>
