@@ -79,10 +79,10 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .floating .dialog-head:active { cursor: grabbing; }
 .floating .dialog-head form { flex: none; }
 .floating .dialog-head button { cursor: pointer; }
-.floating #reference-title {
+.floating .dialog-title {
   overflow-wrap: anywhere;
 }
-.floating #reference-title::after {
+.floating .dialog-title::after {
   content: "拖動頂欄移動";
   display: block;
   margin-top: 3px;
@@ -90,12 +90,12 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   font-weight: 500;
   color: var(--green);
 }
-.floating #reference-content {
+.floating .dialog-body {
   overflow: auto;
   overscroll-behavior: contain;
   padding: 0 18px 16px;
 }
-.floating #reference-content > .reference-item:first-child { border-top: 0; }
+.floating .dialog-body > .reference-item:first-child { border-top: 0; }
 .clause-more { margin: 8px 0 2px; }
 .clause-more > summary {
   width: fit-content;
@@ -181,7 +181,7 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .bo-provision-source { color: var(--muted); font-size: .82rem; margin: 8px 0; }
 
 .dialog-actions { display: flex; align-items: center; gap: 7px; flex: none; }
-.dialog-head #reference-quiz-button {
+.dialog-head .dialog-quiz-button {
   width: auto;
   min-height: 37px;
   padding: 0 10px;
@@ -192,7 +192,7 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   font-weight: 750;
   white-space: nowrap;
 }
-.dialog-head #reference-quiz-button[aria-expanded="true"] { background: #e6f1eb; color: var(--green); }
+.dialog-head .dialog-quiz-button[aria-expanded="true"] { background: #e6f1eb; color: var(--green); }
 .reference-quiz {
   margin: 12px 0;
   padding: 12px;
@@ -251,3 +251,18 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .occupation-result { padding: 7px 9px; border-left: 3px solid #aa780b; background: #fcf2d8; }
 .occupation-refusal { padding: 7px 9px; border-left: 3px solid #a05353; background: #fbefef; }
 .occupation-links { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+
+.reference-cross {
+  display: inline;
+  padding: 0 .15em;
+  border: 0;
+  border-radius: 3px;
+  background: #e2efe9;
+  color: #174e3b;
+  font: inherit;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: .14em;
+}
+.reference-cross:hover { background: #cfe5db; }
+.reference-parent { margin: 10px 0 2px; }
