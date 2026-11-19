@@ -581,7 +581,7 @@ function renderProvisionText(text) {
   return html + escapeText(value.slice(offset));
 }
 
-function renderProvisionTree(entries) {
+function renderProvisionTree(entries, headings) {
   const root = { items: [], children: new Map() };
   for (const { label, title, text } of entries) {
     const [number, qualifier = ""] = label.split("｜");
@@ -614,10 +614,18 @@ function renderProvisionTree(entries) {
     if (!item.items) {
       return `<li class="provision-copy">${item.description ? `<strong>${renderProvisionText(item.description)}</strong>` : ""}<p>${renderProvisionText(item.text)}</p></li>`;
     }
-    const label = depth === 0 && item.number.startsWith("(") ? `第 ${item.number} 款` : item.number;
-    return `<li class="provision-branch"${depth === 0 ? ` data-provision-number="${escapeText(item.number)}"` : ""}><div class="provision-number">${escapeText(label)}</div><ol role="list">${renderItems(item.items, depth + 1)}</ol></li>`;
+    const isSubsection = depth === 0 && /^\(\d/.test(item.number);
+    const label = isSubsection ? `第 ${item.number} 款` : item.number;
+    const heading = isSubsection ? headings?.[item.number.replace(" 至 ", "-")] : "";
+    return `<li class="provision-branch"${depth === 0 ? ` data-provision-number="${escapeText(item.number)}"` : ""}><div class="provision-number">${escapeText(label)}</div>${heading ? renderProvisionHeading(heading) : ""}<ol role="list">${renderItems(item.items, depth + 1)}</ol></li>`;
   }).join("");
-  return `<ol class="provision-tree" role="list">${renderItems(root.items, 0)}</ol>`;
+  const introduction = typeof headings === "string"
+    ? `<li>${renderProvisionHeading(headings)}</li>` : "";
+  return `<ol class="provision-tree" role="list">${introduction}${renderItems(root.items, 0)}</ol>`;
+}
+
+function renderProvisionHeading(heading) {
+  return `<p class="provision-heading">${escapeText(heading)}</p>`;
 }
 
 function renderOccupationGuide() {
@@ -661,10 +669,15 @@ function expandClause(clause, open = false) {
     ? Array.from({ length: Number(range[2]) - Number(range[1]) + 1 }, (_, i) => `(${Number(range[1]) + i})`)
     : selected.split("、").map(value => value.replace(/^§\d+[A-Z]*/, ""));
   const include = label => !selected || prefixes.some(prefix => label.startsWith(prefix));
+  const headings = boProvisionHeadings[root];
   const details = root === "§21"
     ? boSection21Explanations.map(([heading, text]) => {
       const [label, title] = heading.slice(root.length).split("｜");
-      return { label: title === "續文" ? `${label}｜續文` : label, title, text };
+      return {
+        label: title === "續文" ? `${label}｜續文` : label,
+        title: headings[label] && title !== "續文" ? "" : title,
+        text
+      };
     })
     : notes.map(([label, text]) => ({ label, text }));
   const source = `${references.bo[2]}?xpid=${encodeURIComponent(anchor)}`;
@@ -672,7 +685,7 @@ function expandClause(clause, open = false) {
   return `${clause === "§21" ? renderOccupationGuide() : ""}<details class="clause-more" data-quiz-provision="${escapeText(root)}"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
     <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
     <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">專業詞</li></ul>
-    ${renderProvisionTree(details.filter(({ label }) => include(label)))}</details>`;
+    ${renderProvisionTree(details.filter(({ label }) => include(label)), headings)}</details>`;
 }
 
 function renderFlowClauses(clauses) {
