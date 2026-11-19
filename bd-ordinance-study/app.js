@@ -3,10 +3,12 @@ const dialog = document.querySelector("#reference-dialog");
 const dialogHead = dialog.querySelector(".dialog-head");
 const referenceTitle = dialog.querySelector("#reference-title");
 const referenceContent = dialog.querySelector("#reference-content");
+const quizButton = dialog.querySelector("#reference-quiz-button");
 const navigation = [...document.querySelectorAll("[data-route]")];
 let current = "bo";
 let selectedStep = 0;
 let dialogDrag;
+let quizState;
 
 function boText(value) {
   if (current !== "bo") return value;
@@ -241,6 +243,9 @@ function activateStep(index, focus = false) {
 
 function showReferences(keys, clause = null) {
   if (dialog.open) dialog.close();
+  quizButton.hidden = true;
+  quizButton.setAttribute("aria-expanded", "false");
+  quizState = undefined;
   dialog.classList.remove("floating");
   dialog.style.left = "";
   dialog.style.top = "";
@@ -262,6 +267,20 @@ function showFrameworkDialog(title, content, ref = "bo") {
   referenceTitle.textContent = boText(title);
   referenceContent.innerHTML = content +
     `<div class="source-row"><a href="${references[ref][2]}" target="_blank" rel="noopener noreferrer">睇 Cap. 123 官方條文 ↗</a></div>`;
+  const keys = [...new Set([...referenceContent.querySelectorAll("[data-quiz-provision]")].map(node => node.dataset.quizProvision))];
+  quizState = undefined;
+  quizButton.hidden = keys.length === 0;
+  quizButton.setAttribute("aria-expanded", "false");
+  if (keys.length) {
+    const panel = document.createElement("section");
+    panel.id = "reference-quiz";
+    panel.className = "reference-quiz";
+    panel.hidden = true;
+    panel.setAttribute("aria-label", "條文小測試");
+    referenceContent.prepend(panel);
+    quizState = { panel, keys, key: keys[0] };
+    startProvisionQuiz();
+  }
   if (!dialog.open) dialog.show();
   referenceContent.scrollTop = 0;
   keepDialogInView();
@@ -302,6 +321,89 @@ function escapeText(value) {
   const entities = { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" };
   return value.replace(/[&<>"']/g, character => entities[character]);
 }
+
+function startProvisionQuiz() {
+  quizState.index = 0;
+  quizState.correct = 0;
+  quizState.selected = undefined;
+}
+
+function renderProvisionQuiz() {
+  const { panel, keys, key, index, correct, selected } = quizState;
+  const questions = boQuizQuestions[key];
+  const picker = keys.length > 1 ? `<label class="quiz-picker">揀條文 <select data-quiz-select>${keys.map(clause =>
+    `<option value="${escapeText(clause)}"${clause === key ? " selected" : ""}>${escapeText(boText(clause))}</option>`
+  ).join("")}</select></label>` : "";
+  if (index >= questions.length) {
+    panel.innerHTML = `${picker}<h3 tabindex="-1" data-quiz-focus>答啱 ${correct}／${questions.length} 題</h3>
+      <button type="button" class="source-chip" data-quiz-action="retry">再做一次</button>`;
+    return;
+  }
+  const [prompt, answer, wrongA, wrongB, explanation, pinpoint] = questions[index];
+  if (!quizState.options) {
+    quizState.options = [answer, wrongA, wrongB];
+    for (let i = quizState.options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [quizState.options[i], quizState.options[j]] = [quizState.options[j], quizState.options[i]];
+    }
+  }
+  const complete = selected !== undefined;
+  const source = `${references.bo[2]}?xpid=${encodeURIComponent(boPlainProvisions[key][3])}`;
+  const display = value => escapeText(boText(value));
+  panel.innerHTML = `${picker}<p class="quiz-count">第 ${index + 1}／${questions.length} 題 · ${display(key)}</p>
+    <h3 tabindex="-1" data-quiz-focus>${display(prompt)}</h3>
+    <div class="quiz-options">${quizState.options.map((option, i) => {
+      const status = complete ? option === answer ? "right" : selected === i ? "wrong" : "" : "";
+      return `<button type="button" data-quiz-option="${i}"${complete ? " disabled" : ""}${status ? ` class="${status}"` : ""}>${display(option)}${status ? `<small>${status === "right" ? "正確答案" : "你揀咗呢項"}</small>` : ""}</button>`;
+    }).join("")}</div>
+    ${complete ? `<div class="quiz-result" role="status" tabindex="-1" data-quiz-feedback><strong>${quizState.options[selected] === answer ? "答啱" : "答錯咗"}</strong>
+    <p>${display(explanation)}</p><a href="${source}" target="_blank" rel="noopener noreferrer">對照 ${display(key)}${pinpoint ? ` ${display(pinpoint)}` : ""}原文 ↗</a></div>
+    <button type="button" class="source-chip" data-quiz-action="next">${index + 1 === questions.length ? "睇結果" : "下一題"}</button>` : ""}`;
+}
+
+quizButton.addEventListener("click", () => {
+  const { panel } = quizState;
+  panel.hidden = !panel.hidden;
+  quizButton.setAttribute("aria-expanded", String(!panel.hidden));
+  if (!panel.hidden) {
+    renderProvisionQuiz();
+    referenceContent.scrollTop = 0;
+    panel.querySelector("[data-quiz-focus]").focus({ preventScroll: true });
+  }
+  keepDialogInView();
+});
+
+referenceContent.addEventListener("change", event => {
+  if (!event.target.matches("[data-quiz-select]")) return;
+  quizState.key = event.target.value;
+  startProvisionQuiz();
+  quizState.options = undefined;
+  renderProvisionQuiz();
+  quizState.panel.querySelector("[data-quiz-focus]").focus();
+});
+
+referenceContent.addEventListener("click", event => {
+  const button = event.target.closest("button");
+  if (!button || !quizState?.panel.contains(button)) return;
+  if (button.dataset.quizOption !== undefined) {
+    if (quizState.selected !== undefined) return;
+    quizState.selected = Number(button.dataset.quizOption);
+    if (quizState.options[quizState.selected] === boQuizQuestions[quizState.key][quizState.index][1]) quizState.correct++;
+    renderProvisionQuiz();
+    quizState.panel.querySelector("[data-quiz-feedback]").focus();
+    keepDialogInView();
+    return;
+  }
+  if (button.dataset.quizAction === "retry") startProvisionQuiz();
+  else if (button.dataset.quizAction === "next") {
+    quizState.index++;
+    quizState.selected = undefined;
+  } else return;
+  quizState.options = undefined;
+  renderProvisionQuiz();
+  quizState.panel.querySelector("[data-quiz-focus]").focus();
+  keepDialogInView();
+});
 
 function renderProvisionIndex(framework) {
   const groups = new Map();
@@ -389,7 +491,7 @@ function expandClause(clause, open = false) {
     : notes.map(([label, text]) => ({ label, text }));
   const source = `${references.bo[2]}?xpid=${encodeURIComponent(anchor)}`;
   const mode = root === "§21" ? "逐款白話解釋" : "逐款讀本 · 由中文原文轉成較口語嘅寫法，可對照官方原文";
-  return `<details class="clause-more"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
+  return `<details class="clause-more" data-quiz-provision="${escapeText(root)}"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
     <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
     <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">專業詞</li></ul>
     ${renderProvisionTree(details.filter(({ label }) => include(label)))}</details>`;
