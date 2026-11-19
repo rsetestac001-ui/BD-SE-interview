@@ -1,14 +1,12 @@
 const page = document.querySelector("#page");
-const dialog = document.querySelector("#reference-dialog");
-const dialogHead = dialog.querySelector(".dialog-head");
-const referenceTitle = dialog.querySelector("#reference-title");
-const referenceContent = dialog.querySelector("#reference-content");
-const quizButton = dialog.querySelector("#reference-quiz-button");
+const referenceTemplate = document.querySelector("#reference-dialog").cloneNode(true);
+const primaryReferenceWindow = createReferenceWindow(document.querySelector("#reference-dialog"));
+const linkedReferenceWindows = new Map();
 const navigation = [...document.querySelectorAll("[data-route]")];
+let referenceWindowSerial = 0;
+let referenceWindowLayer = 20;
 let current = "bo";
 let selectedStep = 0;
-let dialogDrag;
-let quizState;
 
 function boText(value) {
   if (current !== "bo") return value;
@@ -210,7 +208,12 @@ function renderComparison() {
 }
 
 function setRoute(moveFocus = false) {
-  if (dialog.open) dialog.close();
+  primaryReferenceWindow.dialog.close();
+  for (const { dialog } of linkedReferenceWindows.values()) {
+    dialog.close();
+    dialog.remove();
+  }
+  linkedReferenceWindows.clear();
   const hash = location.hash.slice(1);
   current = [...Object.keys(courses), "compare"].includes(hash) ? hash : "bo";
   selectedStep = 0;
@@ -241,168 +244,289 @@ function activateStep(index, focus = false) {
   if (focus) buttons[index].focus();
 }
 
-function showReferences(keys, clause = null) {
-  if (dialog.open) dialog.close();
-  quizButton.hidden = true;
-  quizButton.setAttribute("aria-expanded", "false");
-  quizState = undefined;
-  dialog.classList.remove("floating");
-  dialog.style.left = "";
-  dialog.style.top = "";
-  referenceTitle.textContent = boText(clause?.[0] ?? "官方依據");
-  referenceContent.innerHTML = keys.map(key => {
-    const [title, context, url] = references[key];
-    return `<div class="reference-item"><h3>${boText(title)}</h3><p>${boText(clause?.[1] ?? context)}</p><a href="${url}" target="_blank" rel="noopener noreferrer">開啟官方來源 ↗</a></div>`;
-  }).join("");
-  dialog.showModal();
-}
-
-function showFrameworkDialog(title, content, ref = "bo") {
-  if (dialog.open && !dialog.classList.contains("floating")) dialog.close();
-  if (!dialog.open) {
-    dialog.style.left = "";
-    dialog.style.top = "";
-  }
-  dialog.classList.add("floating");
-  referenceTitle.textContent = boText(title);
-  referenceContent.innerHTML = content +
-    `<div class="source-row"><a href="${references[ref][2]}" target="_blank" rel="noopener noreferrer">睇 Cap. 123 官方條文 ↗</a></div>`;
-  const keys = [...new Set([...referenceContent.querySelectorAll("[data-quiz-provision]")].map(node => node.dataset.quizProvision))];
-  quizState = undefined;
-  quizButton.hidden = keys.length === 0;
-  quizButton.setAttribute("aria-expanded", "false");
-  if (keys.length) {
-    const panel = document.createElement("section");
-    panel.id = "reference-quiz";
-    panel.className = "reference-quiz";
-    panel.hidden = true;
-    panel.setAttribute("aria-label", "條文小測試");
-    referenceContent.prepend(panel);
-    quizState = { panel, keys, key: keys[0] };
-    startProvisionQuiz();
-  }
-  if (!dialog.open) dialog.show();
-  referenceContent.scrollTop = 0;
-  keepDialogInView();
-}
-
-function moveDialog(left, top) {
-  const { width, height } = dialog.getBoundingClientRect();
-  const viewport = document.documentElement;
-  const clamp = (value, limit) => Math.max(8, Math.min(value, limit - 8));
-  dialog.style.left = `${clamp(left, viewport.clientWidth - width)}px`;
-  dialog.style.top = `${clamp(top, viewport.clientHeight - height)}px`;
-}
-
-function keepDialogInView() {
-  if (!dialog.open || !dialog.classList.contains("floating") || !dialog.style.left) return;
-  const { left, top } = dialog.getBoundingClientRect();
-  moveDialog(left, top);
-}
-
-dialogHead.addEventListener("pointerdown", event => {
-  if (!dialog.classList.contains("floating") || !event.isPrimary || event.button !== 0 || event.target.closest("button")) return;
-  const { left, top } = dialog.getBoundingClientRect();
-  dialogDrag = { id: event.pointerId, x: event.clientX - left, y: event.clientY - top };
-  dialogHead.setPointerCapture(event.pointerId);
-});
-dialogHead.addEventListener("pointermove", event => {
-  if (dialogDrag?.id !== event.pointerId || !dialog.open) return;
-  moveDialog(event.clientX - dialogDrag.x, event.clientY - dialogDrag.y);
-});
-dialogHead.addEventListener("lostpointercapture", () => { dialogDrag = null; });
-dialog.addEventListener("keydown", event => {
-  if (event.key === "Escape" && dialog.classList.contains("floating")) dialog.close();
-});
-referenceContent.addEventListener("toggle", keepDialogInView, true);
-window.addEventListener("resize", keepDialogInView);
-
 function escapeText(value) {
   const entities = { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" };
   return value.replace(/[&<>"']/g, character => entities[character]);
 }
 
-function startProvisionQuiz() {
-  quizState.index = 0;
-  quizState.correct = 0;
-  quizState.selected = undefined;
-}
+function createReferenceWindow(dialog) {
+  const dialogHead = dialog.querySelector(".dialog-head");
+  const referenceTitle = dialog.querySelector(".dialog-title");
+  const referenceContent = dialog.querySelector(".dialog-body");
+  const quizButton = dialog.querySelector(".dialog-quiz-button");
+  let dialogDrag;
+  let quizState;
 
-function renderProvisionQuiz() {
-  const { panel, keys, key, index, correct, selected } = quizState;
-  const questions = boQuizQuestions[key];
-  const picker = keys.length > 1 ? `<label class="quiz-picker">揀條文 <select data-quiz-select>${keys.map(clause =>
-    `<option value="${escapeText(clause)}"${clause === key ? " selected" : ""}>${escapeText(boText(clause))}</option>`
-  ).join("")}</select></label>` : "";
-  if (index >= questions.length) {
-    panel.innerHTML = `${picker}<h3 tabindex="-1" data-quiz-focus>答啱 ${correct}／${questions.length} 題</h3>
-      <button type="button" class="source-chip" data-quiz-action="retry">再做一次</button>`;
-    return;
+  function raise() {
+    if (dialog.classList.contains("floating")) dialog.style.zIndex = ++referenceWindowLayer;
   }
-  const [prompt, answer, wrongA, wrongB, explanation, pinpoint] = questions[index];
-  if (!quizState.options) {
-    quizState.options = [answer, wrongA, wrongB];
-    for (let i = quizState.options.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [quizState.options[i], quizState.options[j]] = [quizState.options[j], quizState.options[i]];
+
+  function positionBeside(parent) {
+    const width = document.documentElement.clientWidth;
+    const right = width - parent.right - 24;
+    const left = parent.left - 24;
+    if (Math.max(right, left) >= 320) {
+      const useRight = right >= left;
+      const available = useRight ? right : left;
+      dialog.style.width = `min(550px, ${available}px)`;
+      const childWidth = dialog.getBoundingClientRect().width;
+      moveDialog(useRight ? parent.right + 12 : parent.left - childWidth - 12, parent.top);
+    } else {
+      dialog.style.width = "min(550px, calc(100% - 36px))";
+      dialog.style.maxHeight = "min(65dvh, 620px)";
+      moveDialog(parent.left + 18, parent.top + 58);
     }
   }
-  const complete = selected !== undefined;
-  const source = `${references.bo[2]}?xpid=${encodeURIComponent(boPlainProvisions[key][3])}`;
-  const display = value => escapeText(boText(value));
-  panel.innerHTML = `${picker}<p class="quiz-count">第 ${index + 1}／${questions.length} 題 · ${display(key)}</p>
-    <h3 tabindex="-1" data-quiz-focus>${display(prompt)}</h3>
-    <div class="quiz-options">${quizState.options.map((option, i) => {
-      const status = complete ? option === answer ? "right" : selected === i ? "wrong" : "" : "";
-      return `<button type="button" data-quiz-option="${i}"${complete ? " disabled" : ""}${status ? ` class="${status}"` : ""}>${display(option)}${status ? `<small>${status === "right" ? "正確答案" : "你揀咗呢項"}</small>` : ""}</button>`;
-    }).join("")}</div>
-    ${complete ? `<div class="quiz-result" role="status" tabindex="-1" data-quiz-feedback><strong>${quizState.options[selected] === answer ? "答啱" : "答錯咗"}</strong>
-    <p>${display(explanation)}</p><a href="${source}" target="_blank" rel="noopener noreferrer">對照 ${display(key)}${pinpoint ? ` ${display(pinpoint)}` : ""}原文 ↗</a></div>
-    <button type="button" class="source-chip" data-quiz-action="next">${index + 1 === questions.length ? "睇結果" : "下一題"}</button>` : ""}`;
+
+  function jumpToSubsection(number, scope = referenceContent) {
+    const details = [...scope.querySelectorAll(".clause-more")].find(item =>
+      [...item.querySelectorAll("[data-provision-number]")].some(node => node.dataset.provisionNumber === number));
+    const target = details && [...details.querySelectorAll("[data-provision-number]")]
+      .find(item => item.dataset.provisionNumber === number);
+    if (!target) return;
+    details.open = true;
+    target.tabIndex = -1;
+    target.focus({ preventScroll: true });
+    referenceContent.scrollTop += target.getBoundingClientRect().top - referenceContent.getBoundingClientRect().top - 10;
+  }
+
+  dialog.addEventListener("pointerdown", raise);
+  dialog.addEventListener("focusin", raise);
+  function showReferences(keys, clause = null) {
+    if (dialog.open) dialog.close();
+    quizButton.hidden = true;
+    quizButton.setAttribute("aria-expanded", "false");
+    quizState = undefined;
+    dialog.classList.remove("floating");
+    dialog.style.left = "";
+    dialog.style.top = "";
+    referenceTitle.textContent = boText(clause?.[0] ?? "官方依據");
+    referenceContent.innerHTML = keys.map(key => {
+      const [title, context, url] = references[key];
+      return `<div class="reference-item"><h3>${boText(title)}</h3><p>${boText(clause?.[1] ?? context)}</p><a href="${url}" target="_blank" rel="noopener noreferrer">開啟官方來源 ↗</a></div>`;
+    }).join("");
+    dialog.showModal();
+  }
+
+  function showFrameworkDialog(title, content, ref = "bo", parent) {
+    if (dialog.open && !dialog.classList.contains("floating")) dialog.close();
+    if (!dialog.open) {
+      dialog.style.left = "";
+      dialog.style.top = "";
+    }
+    dialog.classList.add("floating");
+    referenceTitle.textContent = boText(title);
+    const back = parent ? `<button type="button" class="source-chip reference-parent" data-reference-parent>返回 ${escapeText(parent.title())}</button>` : "";
+    referenceContent.innerHTML = back + content +
+      `<div class="source-row"><a href="${references[ref][2]}" target="_blank" rel="noopener noreferrer">睇 Cap. 123 官方條文 ↗</a></div>`;
+    const keys = [...new Set([...referenceContent.querySelectorAll("[data-quiz-provision]")].map(node => node.dataset.quizProvision))];
+    quizState = undefined;
+    quizButton.hidden = keys.length === 0;
+    quizButton.setAttribute("aria-expanded", "false");
+    if (keys.length) {
+      const panel = document.createElement("section");
+      panel.id = quizButton.getAttribute("aria-controls");
+      panel.className = "reference-quiz";
+      panel.hidden = true;
+      panel.setAttribute("aria-label", "條文小測試");
+      referenceContent.prepend(panel);
+      quizState = { panel, keys, key: keys[0] };
+      startProvisionQuiz();
+    }
+    if (!dialog.open) dialog.show();
+    if (parent) positionBeside(parent.dialog.getBoundingClientRect());
+    raise();
+    referenceContent.scrollTop = 0;
+    keepDialogInView();
+  }
+
+  function moveDialog(left, top) {
+    const { width, height } = dialog.getBoundingClientRect();
+    const viewport = document.documentElement;
+    const clamp = (value, limit) => Math.max(8, Math.min(value, limit - 8));
+    dialog.style.left = `${clamp(left, viewport.clientWidth - width)}px`;
+    dialog.style.top = `${clamp(top, viewport.clientHeight - height)}px`;
+  }
+
+  function keepDialogInView() {
+    if (!dialog.open || !dialog.classList.contains("floating") || !dialog.style.left) return;
+    const { left, top } = dialog.getBoundingClientRect();
+    moveDialog(left, top);
+  }
+
+  dialogHead.addEventListener("pointerdown", event => {
+    if (!dialog.classList.contains("floating") || !event.isPrimary || event.button !== 0 || event.target.closest("button")) return;
+    const { left, top } = dialog.getBoundingClientRect();
+    dialogDrag = { id: event.pointerId, x: event.clientX - left, y: event.clientY - top };
+    dialogHead.setPointerCapture(event.pointerId);
+  });
+  dialogHead.addEventListener("pointermove", event => {
+    if (dialogDrag?.id !== event.pointerId || !dialog.open) return;
+    moveDialog(event.clientX - dialogDrag.x, event.clientY - dialogDrag.y);
+  });
+  dialogHead.addEventListener("lostpointercapture", () => { dialogDrag = null; });
+  dialog.addEventListener("keydown", event => {
+    if (event.key === "Escape" && dialog.classList.contains("floating")) dialog.close();
+  });
+  referenceContent.addEventListener("toggle", keepDialogInView, true);
+
+
+  function startProvisionQuiz() {
+    quizState.index = 0;
+    quizState.correct = 0;
+    quizState.selected = undefined;
+  }
+
+  function renderProvisionQuiz() {
+    const { panel, keys, key, index, correct, selected } = quizState;
+    const questions = boQuizQuestions[key];
+    const picker = keys.length > 1 ? `<label class="quiz-picker">揀條文 <select data-quiz-select>${keys.map(clause =>
+      `<option value="${escapeText(clause)}"${clause === key ? " selected" : ""}>${escapeText(boText(clause))}</option>`
+    ).join("")}</select></label>` : "";
+    if (index >= questions.length) {
+      panel.innerHTML = `${picker}<h3 tabindex="-1" data-quiz-focus>答啱 ${correct}／${questions.length} 題</h3>
+        <button type="button" class="source-chip" data-quiz-action="retry">再做一次</button>`;
+      return;
+    }
+    const [prompt, answer, wrongA, wrongB, explanation, pinpoint] = questions[index];
+    if (!quizState.options) {
+      quizState.options = [answer, wrongA, wrongB];
+      for (let i = quizState.options.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [quizState.options[i], quizState.options[j]] = [quizState.options[j], quizState.options[i]];
+      }
+    }
+    const complete = selected !== undefined;
+    const source = `${references.bo[2]}?xpid=${encodeURIComponent(boPlainProvisions[key][3])}`;
+    const display = value => escapeText(boText(value));
+    panel.innerHTML = `${picker}<p class="quiz-count">第 ${index + 1}／${questions.length} 題 · ${display(key)}</p>
+      <h3 tabindex="-1" data-quiz-focus>${display(prompt)}</h3>
+      <div class="quiz-options">${quizState.options.map((option, i) => {
+        const status = complete ? option === answer ? "right" : selected === i ? "wrong" : "" : "";
+        return `<button type="button" data-quiz-option="${i}"${complete ? " disabled" : ""}${status ? ` class="${status}"` : ""}>${display(option)}${status ? `<small>${status === "right" ? "正確答案" : "你揀咗呢項"}</small>` : ""}</button>`;
+      }).join("")}</div>
+      ${complete ? `<div class="quiz-result" role="status" tabindex="-1" data-quiz-feedback><strong>${quizState.options[selected] === answer ? "答啱" : "答錯咗"}</strong>
+      <p>${renderProvisionText(explanation)}</p><a href="${source}" target="_blank" rel="noopener noreferrer">對照 ${display(key)}${pinpoint ? ` ${display(pinpoint)}` : ""}原文 ↗</a></div>
+      <button type="button" class="source-chip" data-quiz-action="next">${index + 1 === questions.length ? "睇結果" : "下一題"}</button>` : ""}`;
+  }
+
+  quizButton.addEventListener("click", () => {
+    const { panel } = quizState;
+    panel.hidden = !panel.hidden;
+    quizButton.setAttribute("aria-expanded", String(!panel.hidden));
+    if (!panel.hidden) {
+      renderProvisionQuiz();
+      referenceContent.scrollTop = 0;
+      panel.querySelector("[data-quiz-focus]").focus({ preventScroll: true });
+    }
+    keepDialogInView();
+  });
+
+  referenceContent.addEventListener("change", event => {
+    if (!event.target.matches("[data-quiz-select]")) return;
+    quizState.key = event.target.value;
+    startProvisionQuiz();
+    quizState.options = undefined;
+    renderProvisionQuiz();
+    quizState.panel.querySelector("[data-quiz-focus]").focus();
+  });
+
+  referenceContent.addEventListener("click", event => {
+    const button = event.target.closest("button");
+    if (!button || !quizState?.panel.contains(button)) return;
+    if (button.dataset.quizOption !== undefined) {
+      if (quizState.selected !== undefined) return;
+      quizState.selected = Number(button.dataset.quizOption);
+      if (quizState.options[quizState.selected] === boQuizQuestions[quizState.key][quizState.index][1]) quizState.correct++;
+      renderProvisionQuiz();
+      quizState.panel.querySelector("[data-quiz-feedback]").focus();
+      keepDialogInView();
+      return;
+    }
+    if (button.dataset.quizAction === "retry") startProvisionQuiz();
+    else if (button.dataset.quizAction === "next") {
+      quizState.index++;
+      quizState.selected = undefined;
+    } else return;
+    quizState.options = undefined;
+    renderProvisionQuiz();
+    quizState.panel.querySelector("[data-quiz-focus]").focus();
+    keepDialogInView();
+  });
+
+  referenceContent.addEventListener("click", event => {
+    const cross = event.target.closest("[data-reference-clause]");
+    if (cross) {
+      openLinkedProvision(cross.dataset.referenceClause, controller, cross);
+      return;
+    }
+    const back = event.target.closest("[data-reference-parent]");
+    if (back) {
+      if (controller.parent?.dialog.open && controller.trigger?.isConnected) controller.parent.focus();
+      else back.hidden = true;
+      return;
+    }
+    const jump = event.target.closest("[data-occupation-jump]");
+    if (jump) jumpToSubsection(jump.dataset.occupationJump, jump.closest(".occupation-guide").parentElement);
+  });
+
+  const controller = {
+    dialog, keepDialogInView, showReferences, showFrameworkDialog, jumpToSubsection,
+    title: () => referenceTitle.textContent,
+    hasProvision: clause => quizState?.keys.length === 1 && quizState.keys[0] === clause,
+    focus() { raise(); referenceTitle.focus({ preventScroll: true }); }
+  };
+  return controller;
 }
 
-quizButton.addEventListener("click", () => {
-  const { panel } = quizState;
-  panel.hidden = !panel.hidden;
-  quizButton.setAttribute("aria-expanded", String(!panel.hidden));
-  if (!panel.hidden) {
-    renderProvisionQuiz();
-    referenceContent.scrollTop = 0;
-    panel.querySelector("[data-quiz-focus]").focus({ preventScroll: true });
-  }
-  keepDialogInView();
-});
+function showFrameworkDialog(title, content, ref) {
+  primaryReferenceWindow.showFrameworkDialog(title, content, ref);
+}
 
-referenceContent.addEventListener("change", event => {
-  if (!event.target.matches("[data-quiz-select]")) return;
-  quizState.key = event.target.value;
-  startProvisionQuiz();
-  quizState.options = undefined;
-  renderProvisionQuiz();
-  quizState.panel.querySelector("[data-quiz-focus]").focus();
-});
+function openProvision(clause, referenceWindow = primaryReferenceWindow) {
+  const [, title, english] = boPlainProvisions[clause];
+  const heading = [clause, title].filter(Boolean).join("｜");
+  referenceWindow.showFrameworkDialog(heading, `${english ? `<p class="bo-provision-source">${escapeText(english)}</p>` : ""}${expandClause(clause, true)}`, "bo", referenceWindow.parent);
+}
 
-referenceContent.addEventListener("click", event => {
-  const button = event.target.closest("button");
-  if (!button || !quizState?.panel.contains(button)) return;
-  if (button.dataset.quizOption !== undefined) {
-    if (quizState.selected !== undefined) return;
-    quizState.selected = Number(button.dataset.quizOption);
-    if (quizState.options[quizState.selected] === boQuizQuestions[quizState.key][quizState.index][1]) quizState.correct++;
-    renderProvisionQuiz();
-    quizState.panel.querySelector("[data-quiz-feedback]").focus();
-    keepDialogInView();
+function openLinkedProvision(reference, parent, trigger) {
+  const [clause] = reference.match(/^§[0-9]+[A-Z]*|^Schedule [0-9]+/);
+  const subsection = reference.slice(clause.length).match(/^\([0-9]+[A-Z]*\)/)?.[0];
+  const existing = parent.hasProvision(clause) ? parent
+    : primaryReferenceWindow.hasProvision(clause) && primaryReferenceWindow.dialog.open ? primaryReferenceWindow
+    : linkedReferenceWindows.get(clause);
+  if (existing?.dialog.open) {
+    existing.focus();
+    if (subsection) existing.jumpToSubsection(subsection);
     return;
   }
-  if (button.dataset.quizAction === "retry") startProvisionQuiz();
-  else if (button.dataset.quizAction === "next") {
-    quizState.index++;
-    quizState.selected = undefined;
-  } else return;
-  quizState.options = undefined;
-  renderProvisionQuiz();
-  quizState.panel.querySelector("[data-quiz-focus]").focus();
-  keepDialogInView();
+  const dialog = referenceTemplate.cloneNode(true);
+  const id = `linked-reference-${++referenceWindowSerial}`;
+  dialog.id = id;
+  dialog.setAttribute("aria-labelledby", `${id}-title`);
+  dialog.querySelector(".dialog-title").id = `${id}-title`;
+  const quizButton = dialog.querySelector(".dialog-quiz-button");
+  quizButton.removeAttribute("id");
+  quizButton.setAttribute("aria-controls", `${id}-quiz`);
+  dialog.querySelector(".dialog-body").removeAttribute("id");
+  document.body.append(dialog);
+  const referenceWindow = createReferenceWindow(dialog);
+  referenceWindow.parent = parent;
+  referenceWindow.trigger = trigger;
+  linkedReferenceWindows.set(clause, referenceWindow);
+  dialog.addEventListener("close", () => {
+    if (linkedReferenceWindows.get(clause) === referenceWindow) linkedReferenceWindows.delete(clause);
+    dialog.remove();
+    if (parent.dialog.open && trigger.isConnected) trigger.focus({ preventScroll: true });
+  });
+  openProvision(clause, referenceWindow);
+  referenceWindow.focus();
+  if (subsection) referenceWindow.jumpToSubsection(subsection);
+}
+
+window.addEventListener("resize", () => {
+  primaryReferenceWindow.keepDialogInView();
+  for (const referenceWindow of linkedReferenceWindows.values()) referenceWindow.keepDialogInView();
 });
 
 function renderProvisionIndex(framework) {
@@ -420,7 +544,27 @@ function renderProvisionIndex(framework) {
     }).join("")}</details>`;
 }
 
-const provisionEmphasis = /(?<term>\b[A-Z][A-Za-z]+(?:[ -]+[A-Za-z]+){0,8}\s*（[^（）\n]{1,24}）|\b[A-Z]{2,5}\s*（[^（）\n]{1,24}）)|(?<time>(?:\d+(?:\.\d+)?|[一二兩三四五六七八九十百]+)\s*(?:(?:個\s*)?月|日|年|星期|小時)(?:\s*(?:之?內|屆滿|期滿|前|後))?(?![\d年月日]))|(?<rule>唔可以|唔准|唔需要|不得|不准|毋須|無須|無需|必須|要先|須先|須在|須於|須由|須向|須按|須以|須將|要喺|要由|要向|要按|除非|除外|但書|例外)/gu;
+const provisionEmphasis = /(?<reference>第\s*\d+[A-Z]*(?:\s*\([\dA-Za-z]+\))*\s*條|附表\s*\d+)|(?<term>\b[A-Z][A-Za-z]+(?:[ -]+[A-Za-z]+){0,8}\s*（[^（）\n]{1,24}）|\b[A-Z]{2,5}\s*（[^（）\n]{1,24}）)|(?<time>(?:\d+(?:\.\d+)?|[一二兩三四五六七八九十百]+)\s*(?:(?:個\s*)?月|日|年|星期|小時)(?:\s*(?:之?內|屆滿|期滿|前|後))?(?![\d年月日]))|(?<rule>唔可以|唔准|唔需要|不得|不准|毋須|無須|無需|必須|要先|須先|須在|須於|須由|須向|須按|須以|須將|要喺|要由|要向|要按|除非|除外|但書|例外)/gu;
+
+function renderReferenceButton(clause, label) {
+  return `<button type="button" class="reference-cross" aria-haspopup="dialog" data-reference-clause="${escapeText(clause)}">${escapeText(label)}</button>`;
+}
+
+function renderInlineReference(label, prefix) {
+  // Distinguish Cap. 123 references from references to another ordinance or regulation.
+  const scope = prefix.split(/[。；！？\n]/).at(-1);
+  const qualifiers = [...scope.matchAll(/《([^》]+)》|(?:第\s*(\d+[A-Z]*)\s*章)|本條例|呢條例|本例|(?:上述|該|有關)條例/g)];
+  const last = qualifiers.at(-1);
+  const previous = qualifiers.at(-2);
+  if (last && (last[2] ? last[2] !== "123" || /附屬法例|規例/.test(scope.slice(last.index)) ||
+      (previous?.[1] && previous[1] !== "建築物條例") :
+      last[1] ? last[1] !== "建築物條例" : !/^(?:本條例|呢條例|本例)$/.test(last[0]))) return escapeText(label);
+  const reference = label.startsWith("第")
+    ? "§" + label.replace(/[第條\s]/g, "")
+    : "Schedule " + label.replace(/[^0-9]/g, "");
+  const root = reference.split("(")[0];
+  return Object.hasOwn(boPlainProvisions, root) ? renderReferenceButton(reference, label) : escapeText(label);
+}
 
 function renderProvisionText(text) {
   const value = boText(text);
@@ -429,7 +573,9 @@ function renderProvisionText(text) {
   for (const match of value.matchAll(provisionEmphasis)) {
     const kind = match.groups.term ? "term" : match.groups.time ? "time" : "rule";
     html += escapeText(value.slice(offset, match.index));
-    html += `<mark class="provision-mark provision-mark--${kind}">${escapeText(match[0])}</mark>`;
+    html += match.groups.reference
+      ? renderInlineReference(match[0], value.slice(0, match.index))
+      : `<mark class="provision-mark provision-mark--${kind}">${escapeText(match[0])}</mark>`;
     offset = match.index + match[0].length;
   }
   return html + escapeText(value.slice(offset));
@@ -487,7 +633,7 @@ function renderOccupationGuide() {
         </ol>
       </section>
       <section class="occupation-path">
-        <h4>第 17 條要求交表現檢討 <span>第 (8) 款</span></h4>
+        <h4>${renderReferenceButton("§17", "第 17 條")}要求交表現檢討 <span>第 (8) 款</span></h4>
         <ol>
           <li>當局收到所要求嘅表現檢討</li>
           <li>如果你喺之後 60 日內交 OP／TOP 申請，<strong>當作第 60 日先收到申請</strong></li>
@@ -505,19 +651,6 @@ function renderOccupationGuide() {
     </div>
   </section>`;
 }
-
-referenceContent.addEventListener("click", event => {
-  const button = event.target.closest("[data-occupation-jump]");
-  if (!button) return;
-  const details = button.closest(".occupation-guide").nextElementSibling;
-  details.open = true;
-  const target = [...details.querySelectorAll("[data-provision-number]")]
-    .find(item => item.dataset.provisionNumber === button.dataset.occupationJump);
-  if (!target) return;
-  target.tabIndex = -1;
-  target.focus({ preventScroll: true });
-  referenceContent.scrollTop += target.getBoundingClientRect().top - referenceContent.getBoundingClientRect().top - 10;
-});
 
 function expandClause(clause, open = false) {
   const root = clause.match(/^§\d+[A-Z]*/)?.[0] ?? clause;
@@ -546,7 +679,7 @@ function renderFlowClauses(clauses) {
   return flowClauseGroups(clauses).map(([location, articles]) => {
     const rows = articles.map(clause => {
       const [label, meaning = boFlowClauseNotes[clause]] = boFlowClauseLabels[clause] ?? boHighlights[clause];
-      return `<div><dt><span>${boText(clause)}</span> ${label}</dt><dd>${boText(meaning)}${expandClause(clause)}</dd></div>`;
+      return `<div><dt><span>${boText(clause)}</span> ${label}</dt><dd>${renderProvisionText(meaning)}${expandClause(clause)}</dd></div>`;
     }).join("");
     return `<section class="bo-flow-clause-group"><h3>${boText(location)}</h3><dl class="bo-clause-breakdown">${rows}</dl></section>`;
   }).join("");
@@ -556,7 +689,7 @@ function showFrameworkSections(rowIndex) {
   const details = courses[current].framework.rows[rowIndex].at(-1);
   const content = details.groups.map(([group, sections]) =>
     `<section class="reference-item"><h3>${group}</h3><dl class="section-list">${sections.map(([section, meaning]) =>
-      `<dt>${boText(section)}</dt><dd>${boText(meaning)}${expandClause(section)}</dd>`).join("")}</dl></section>`
+      `<dt>${boText(section)}</dt><dd>${renderProvisionText(meaning)}${expandClause(section)}</dd>`).join("")}</dl></section>`
   ).join("") + (details.note ? `<p class="table-note">${boText(details.note)}</p>` : "");
   showFrameworkDialog(details.title, content, details.ref);
 }
@@ -565,10 +698,7 @@ page.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
   if (button.dataset.boProvision) {
-    const clause = button.dataset.boProvision;
-    const [, title, english] = boPlainProvisions[clause];
-    const heading = [clause, title].filter(Boolean).join("｜");
-    showFrameworkDialog(heading, `${english ? `<p class="bo-provision-source">${escapeText(english)}</p>` : ""}${expandClause(clause, true)}`);
+    openProvision(button.dataset.boProvision);
     return;
   }
   if (button.dataset.boFlow) {
@@ -580,7 +710,7 @@ page.addEventListener("click", event => {
     const clause = button.dataset.frameworkClause;
     const [label, meaning] = boHighlights[clause];
     const [part] = courses.bo.framework.rows.find(([, , clauses]) => clauses.includes(clause));
-    showFrameworkDialog(`${clause}｜${label}`, `<section class="reference-item"><p class="detail-label">${boText(part)}</p><p>${boText(meaning)}</p>${expandClause(clause)}</section>`);
+    showFrameworkDialog(`${clause}｜${label}`, `<section class="reference-item"><p class="detail-label">${boText(part)}</p><p>${renderProvisionText(meaning)}</p>${expandClause(clause)}</section>`);
     return;
   }
   if (button.dataset.frameworkRow !== undefined) {
@@ -593,7 +723,7 @@ page.addEventListener("click", event => {
       showFrameworkDialog(title, renderFlowClauses(title.match(/§[0-9]+[A-Z]*/g)));
       return;
     }
-    showReferences([button.dataset.reference], button.dataset.clause ? clauseNotes[current]?.[selectedStep] : null);
+    primaryReferenceWindow.showReferences([button.dataset.reference], button.dataset.clause ? clauseNotes[current]?.[selectedStep] : null);
     return;
   }
   if (button.dataset.jump !== undefined) {
@@ -626,7 +756,7 @@ page.addEventListener("keydown", event => {
 });
 
 document.querySelector("#source-button").addEventListener("click", () => {
-  showReferences(courses[current]?.refs ?? ["bo","regulation","mbisTime","mwisOverview","mbisForms","mwisForms"]);
+  primaryReferenceWindow.showReferences(courses[current]?.refs ?? ["bo","regulation","mbisTime","mwisOverview","mbisForms","mwisForms"]);
 });
 document.querySelector(".skip").addEventListener("click", event => {
   event.preventDefault();
