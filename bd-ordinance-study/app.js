@@ -831,7 +831,9 @@ function renderProvisionTree(entries, headings, section) {
   }
   const renderItems = (items, depth, parentPath = "") => items.map(item => {
     if (!item.items) {
-      return `<li class="provision-copy">${item.description ? `<strong>${renderProvisionText(item.description)}</strong>` : ""}<p>${renderProvisionText(item.text)}</p></li>`;
+      const paragraphs = item.text.split("\n").flatMap(paragraph =>
+        paragraph.length > 140 ? paragraph.split(/(?<=[。；])(?=\S)/u) : [paragraph]);
+      return `<li class="provision-copy">${item.description ? `<strong>${renderProvisionText(item.description)}</strong>` : ""}${paragraphs.map(paragraph => `<p>${renderProvisionText(paragraph)}</p>`).join("")}</li>`;
     }
     const isSubsection = depth === 0 && /^\(\d/.test(item.number);
     const label = isSubsection ? `第 ${item.number} 款` : item.number;
@@ -900,14 +902,14 @@ function expandClause(clause, open = false) {
         title: headings[label] && title !== "續文" ? "" : title,
         text
       };
-    })
-    : notes.map(([label, text]) => ({ label, text }));
+    }).filter(({ label }) => include(label))
+    : formatProvisionReading(root, notes.filter(([label]) => include(label)));
   const source = `${references.bo[2]}?xpid=${encodeURIComponent(anchor)}`;
-  const mode = root === "§21" ? "逐款白話解釋" : "逐款讀本 · 由中文原文轉成較口語嘅寫法，可對照官方原文";
+  const mode = root === "§21" ? "逐款白話解釋" : "逐款易讀版";
   return `${clause === "§21" ? renderOccupationGuide() : ""}<details class="clause-more" data-quiz-provision="${escapeText(root)}"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
     <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
     <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">專業詞</li></ul>
-    ${renderProvisionTree(details.filter(({ label }) => include(label)), headings, root)}</details>`;
+    ${renderProvisionTree(details, headings, root)}</details>`;
 }
 
 function renderFlowClauses(clauses) {
