@@ -21,3 +21,26 @@ dialog{color:var(--ink);max-width:550px;width:calc(100% - 30px);max-height:min(7
 .section-list dt{font-weight:700}
 .section-list dd{margin:0}
 @media(max-width:480px){.framework th,.framework td{padding:8px 5px;font-size:13px}}
+
+.bo-flow-board{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:clamp(12px,3vw,24px)}
+.bo-flow-main,.bo-flow-lookup{max-width:740px;margin-inline:auto}
+.bo-flow-main>.bo-flow-node{display:block;width:min(100%,310px);margin-inline:auto;text-align:center}
+.bo-flow-node{width:100%;height:100%;min-height:58px;padding:9px 11px;border:1px solid #a8c9b8;border-radius:10px;background:#f1f8f2;color:var(--ink);text-align:left;overflow-wrap:anywhere}
+.bo-flow-node:hover{background:#e2f2e5;border-color:var(--green)}
+.bo-flow-node strong,.bo-flow-node small{display:block}
+.bo-flow-node strong{font-size:14px;line-height:1.35}
+.bo-flow-node small{font-size:11px;color:var(--green);line-height:1.4;margin-top:4px}
+.bo-flow-arrow{display:grid;place-items:center;height:26px;color:var(--green);font-size:20px;line-height:1}
+.bo-flow-fork{--branch-line:#76a590;position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding-block:13px}
+.bo-flow-fork::before,.bo-flow-fork::after{content:"";position:absolute;inset-inline:calc((100% - 16px)/6);border-top:1px solid var(--branch-line)}
+.bo-flow-fork::before{top:0}
+.bo-flow-fork::after{bottom:0}
+.bo-flow-fork>div{position:relative}
+.bo-flow-fork>div::before,.bo-flow-fork>div::after{content:"";position:absolute;left:50%;height:13px;border-left:1px solid var(--branch-line)}
+.bo-flow-fork>div::before{bottom:100%}
+.bo-flow-fork>div::after{top:100%}
+.bo-flow-fork .bo-flow-node{background:var(--mint);text-align:center}
+.bo-flow-lookup h3{margin:20px 0 8px;border-top:1px solid var(--line);padding-top:15px;font-size:15px}
+.bo-flow-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.bo-flow-grid .bo-flow-node{background:#fbfdf9}
+@media(max-width:400px){.bo-flow-node{padding-inline:6px}.bo-flow-node strong{font-size:13px}}
