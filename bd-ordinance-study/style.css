@@ -118,3 +118,12 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .clause-more > dl dd { margin: 0; color: var(--ink); }
 .clause-more:not([open]) .collapse-label,
 .clause-more[open] .expand-label { display: none; }
+
+.section-range {
+  display: block;
+  margin-top: 4px;
+  color: var(--green);
+  font-size: .9em;
+  font-weight: 650;
+  line-height: 1.45;
+}
