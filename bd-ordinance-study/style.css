@@ -127,3 +127,18 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   font-weight: 650;
   line-height: 1.45;
 }
+
+.bo-provision-index {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+}
+.bo-provision-index summary { cursor: pointer; font-weight: 750; color: var(--green); }
+.bo-provision-index > details { margin: 8px 0; padding: 7px 0; border-top: 1px solid var(--line); }
+.bo-provision-index ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 7px 0 0; padding: 0; list-style: none; }
+.bo-provision-index .source-chip { text-align: left; }
+.bo-provision-source { color: var(--muted); font-size: .82rem; margin: 8px 0; }
+.clause-more > dl > div + div { padding-top: 8px; border-top: 1px solid var(--line); }
+.clause-more > dl dd { overflow-wrap: anywhere; }
