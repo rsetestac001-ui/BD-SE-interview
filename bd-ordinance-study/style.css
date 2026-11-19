@@ -271,4 +271,20 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   text-underline-offset: .14em;
 }
 .reference-cross:hover { background: #cfe5db; }
-.reference-parent { margin: 10px 0 2px; }
+.reference-origin {
+  flex: none;
+  padding: 7px 18px 8px;
+  border-bottom: 1px solid var(--line);
+  background: #edf4fb;
+}
+.reference-origin p {
+  margin: 3px 0 0;
+  color: #214572;
+  font-size: .8rem;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+}
+.provision-branch:focus {
+  outline: 2px solid #517eac;
+  outline-offset: 2px;
+}
