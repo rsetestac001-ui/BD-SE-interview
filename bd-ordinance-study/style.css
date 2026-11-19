@@ -194,6 +194,7 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   .sidebar nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 .provision-copy p { line-height: 1.8; }
+.provision-copy p + p { margin-top: .55em; }
 .provision-legend {
   display: flex;
   flex-wrap: wrap;
