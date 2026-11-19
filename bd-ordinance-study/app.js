@@ -64,7 +64,14 @@ function stepDetail(course, index) {
 function studyTable({ columns, rows, note, ref }) {
   return `<div class="table-wrap" tabindex="0" role="region" aria-label="${columns[0]}"><table>
     <thead><tr>${columns.map(column => `<th scope="col">${column}</th>`).join("")}</tr></thead>
-    <tbody>${rows.map(([label, ...cells]) => `<tr><th scope="row">${label}</th>${cells.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
+    <tbody>${rows.map(([label, ...cells], rowIndex) => `<tr><th scope="row">${label}</th>${columns.slice(1).map((_, columnIndex) => {
+      const cell = cells[columnIndex];
+      if (cell && typeof cell === "object") {
+        const total = cell.groups.reduce((count, [, sections]) => count + sections.length, 0);
+        return `<td><p class="section-summary">${cell.summary}</p><button type="button" class="source-chip" data-framework-row="${rowIndex}" aria-haspopup="dialog">睇 ${total} 條</button></td>`;
+      }
+      return `<td>${cell ?? ""}</td>`;
+    }).join("")}</tr>`).join("")}</tbody>
   </table></div>${note ? `<p class="table-note">${note}</p>` : ""}${ref ? sources([ref]) : ""}`;
 }
 
@@ -166,9 +173,23 @@ function showReferences(keys, clause = null) {
   dialog.showModal();
 }
 
+function showFrameworkSections(rowIndex) {
+  const details = courses[current].framework.rows[rowIndex].at(-1);
+  document.querySelector("#reference-title").textContent = details.title;
+  document.querySelector("#reference-content").innerHTML = details.groups.map(([group, sections]) =>
+    `<section class="reference-item"><h3>${group}</h3><dl class="section-list">${sections.map(([section, meaning]) =>
+      `<dt>${section}</dt><dd>${meaning}</dd>`).join("")}</dl></section>`
+  ).join("") + `<p class="table-note">${details.note}</p><div class="source-row"><a href="${references[details.ref][2]}" target="_blank" rel="noopener noreferrer">睇 Cap. 123 官方條文 ↗</a></div>`;
+  dialog.showModal();
+}
+
 page.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
+  if (button.dataset.frameworkRow !== undefined) {
+    showFrameworkSections(Number(button.dataset.frameworkRow));
+    return;
+  }
   if (button.dataset.reference) {
     showReferences([button.dataset.reference], button.dataset.clause ? clauseNotes[current]?.[selectedStep] : null);
     return;
