@@ -134,6 +134,12 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   color: #fff;
 }
 .provision-copy > strong { font-size: .92em; }
+.provision-tree .provision-heading {
+  margin: 0 0 4px;
+  color: #214572;
+  font-weight: 750;
+  line-height: 1.45;
+}
 .provision-copy p { line-height: 1.8; }
 .provision-legend {
   display: flex;
