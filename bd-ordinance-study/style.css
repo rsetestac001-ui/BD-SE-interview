@@ -221,3 +221,33 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .quiz-options small { display: block; font-weight: 750; }
 .quiz-result { margin: 10px 0; padding: 9px; background: white; border-left: 3px solid var(--green); }
 .quiz-result a { color: var(--green); }
+
+.occupation-guide {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #cbded4;
+  border-radius: 9px;
+  background: #f6faf7;
+}
+.occupation-guide h3 { margin: 0 0 4px; color: #21483d; font-size: 1.05rem; }
+.occupation-guide > p { margin-top: 7px; }
+.occupation-paths {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.occupation-path {
+  padding: 9px 10px;
+  border: 1px solid #d4e4db;
+  border-radius: 7px;
+  background: #fff;
+}
+.occupation-path h4 { margin: 0 0 6px; color: #21483d; font-size: .9rem; }
+.occupation-path h4 span { display: block; color: #4b6258; font-size: .78rem; }
+.occupation-path ol { margin: 0; padding-inline-start: 1.25em; }
+.occupation-path li { padding-inline-start: 3px; line-height: 1.55; }
+.occupation-path li + li { margin-top: 5px; }
+.occupation-result { padding: 7px 9px; border-left: 3px solid #aa780b; background: #fcf2d8; }
+.occupation-refusal { padding: 7px 9px; border-left: 3px solid #a05353; background: #fbefef; }
+.occupation-links { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }

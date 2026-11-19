@@ -469,10 +469,55 @@ function renderProvisionTree(entries) {
       return `<li class="provision-copy">${item.description ? `<strong>${renderProvisionText(item.description)}</strong>` : ""}<p>${renderProvisionText(item.text)}</p></li>`;
     }
     const label = depth === 0 && item.number.startsWith("(") ? `第 ${item.number} 款` : item.number;
-    return `<li class="provision-branch"><div class="provision-number">${escapeText(label)}</div><ol role="list">${renderItems(item.items, depth + 1)}</ol></li>`;
+    return `<li class="provision-branch"${depth === 0 ? ` data-provision-number="${escapeText(item.number)}"` : ""}><div class="provision-number">${escapeText(label)}</div><ol role="list">${renderItems(item.items, depth + 1)}</ol></li>`;
   }).join("");
   return `<ol class="provision-tree" role="list">${renderItems(root.items, 0)}</ol>`;
 }
+
+function renderOccupationGuide() {
+  return `<section class="occupation-guide" aria-label="第 21 條入伙許可速讀">
+    <h3>睇懂入伙紙嘅 14 日同 60 日</h3>
+    <p>先搵出 <strong>14 日從邊日起計</strong>。OP 係入伙紙，TOP 係臨時入伙紙。</p>
+    <div class="occupation-paths">
+      <section class="occupation-path">
+        <h4>一般情況 <span>第 (7) 款</span></h4>
+        <ol>
+          <li>當局收到用適當指明表格交嘅 OP／TOP 申請</li>
+          <li><strong>由收到申請嗰日起計 14 日</strong></li>
+        </ol>
+      </section>
+      <section class="occupation-path">
+        <h4>第 17 條要求交表現檢討 <span>第 (8) 款</span></h4>
+        <ol>
+          <li>當局收到所要求嘅表現檢討</li>
+          <li>如果你喺之後 60 日內交 OP／TOP 申請，<strong>當作第 60 日先收到申請</strong></li>
+          <li><strong>由呢個當作收到申請嘅日子起計 14 日</strong></li>
+        </ol>
+      </section>
+    </div>
+    <p class="occupation-result"><strong>14 日屆滿會點？</strong> 如果當局未向業主送達列明理由嘅書面拒絕通知，許可證就視為已批。</p>
+    <p>例如當局收到表現檢討後第 20 日，你就交咗申請。要等到第 60 日，先開始計嗰 14 日。</p>
+    <p class="occupation-refusal"><strong>表現檢討同拒發有咩關係？</strong> 當局可以按第 (6)(f) 段睇報告有冇交代同證明兩樣嘢：施工檢查同監測夠唔夠、岩土設計假設仲成唔成立。交代或理據不足，可以拒發。</p>
+    <div class="occupation-links" aria-label="跳到相關款項">
+      <button type="button" class="source-chip" data-occupation-jump="(6)">睇 (6) 拒發理由</button>
+      <button type="button" class="source-chip" data-occupation-jump="(7)">睇 (7) 14 日規則</button>
+      <button type="button" class="source-chip" data-occupation-jump="(8)">睇 (8) 60 日規則</button>
+    </div>
+  </section>`;
+}
+
+referenceContent.addEventListener("click", event => {
+  const button = event.target.closest("[data-occupation-jump]");
+  if (!button) return;
+  const details = button.closest(".occupation-guide").nextElementSibling;
+  details.open = true;
+  const target = [...details.querySelectorAll("[data-provision-number]")]
+    .find(item => item.dataset.provisionNumber === button.dataset.occupationJump);
+  if (!target) return;
+  target.tabIndex = -1;
+  target.focus({ preventScroll: true });
+  referenceContent.scrollTop += target.getBoundingClientRect().top - referenceContent.getBoundingClientRect().top - 10;
+});
 
 function expandClause(clause, open = false) {
   const root = clause.match(/^§\d+[A-Z]*/)?.[0] ?? clause;
@@ -491,7 +536,7 @@ function expandClause(clause, open = false) {
     : notes.map(([label, text]) => ({ label, text }));
   const source = `${references.bo[2]}?xpid=${encodeURIComponent(anchor)}`;
   const mode = root === "§21" ? "逐款白話解釋" : "逐款讀本 · 由中文原文轉成較口語嘅寫法，可對照官方原文";
-  return `<details class="clause-more" data-quiz-provision="${escapeText(root)}"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
+  return `${clause === "§21" ? renderOccupationGuide() : ""}<details class="clause-more" data-quiz-provision="${escapeText(root)}"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
     <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
     <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">專業詞</li></ul>
     ${renderProvisionTree(details.filter(({ label }) => include(label)))}</details>`;
