@@ -1,7 +1,7 @@
 const page = document.querySelector("#page");
-const referenceTemplate = document.querySelector("#reference-dialog").cloneNode(true);
-const primaryReferenceWindow = createReferenceWindow(document.querySelector("#reference-dialog"));
-const linkedReferenceWindows = new Map();
+const referenceTemplate = document.querySelector("#reference-dialog");
+referenceTemplate.remove();
+const referenceWindows = new Map();
 const navigation = [...document.querySelectorAll("[data-route]")];
 let referenceWindowSerial = 0;
 let referenceWindowLayer = 20;
@@ -279,12 +279,6 @@ function renderTest() {
 }
 
 function setRoute(moveFocus = false) {
-  primaryReferenceWindow.dialog.close();
-  for (const { dialog } of linkedReferenceWindows.values()) {
-    dialog.close();
-    dialog.remove();
-  }
-  linkedReferenceWindows.clear();
   const hash = location.hash.slice(1);
   current = [...Object.keys(courses), "compare", "favorites", "test"].includes(hash) ? hash : "bo";
   selectedStep = 0;
@@ -451,35 +445,22 @@ function createReferenceWindow(dialog) {
     return origin?.controller.restoreOrigin(origin);
   }
 
-  function showReferences(keys, clause = null) {
-    if (dialog.open) dialog.close();
-    quizButton.hidden = true;
-    flowButton.hidden = true;
-    quizButton.setAttribute("aria-expanded", "false");
-    quizState = undefined;
-    setOrigin();
-    dialog.classList.remove("floating");
-    dialog.style.left = "";
-    dialog.style.top = "";
-    referenceTitle.textContent = boText(clause?.[0] ?? "官方依據");
-    referenceContent.innerHTML = keys.map(key => {
+  function showReferences(keys, clause, anchor) {
+    const content = keys.map(key => {
       const [title, context, url] = references[key];
       return `<div class="reference-item"><h3>${boText(title)}</h3><p>${boText(clause?.[1] ?? context)}</p><a href="${url}" target="_blank" rel="noopener noreferrer">開啟官方來源 ↗</a></div>`;
     }).join("");
-    dialog.showModal();
+    showFrameworkDialog(clause?.[0] ?? "官方依據", content, null, anchor);
   }
 
   function showFrameworkDialog(title, content, ref = "bo", parent) {
-    if (dialog.open && !dialog.classList.contains("floating")) dialog.close();
-    if (!dialog.open) {
-      dialog.style.left = "";
-      dialog.style.top = "";
-    }
+    const opening = !dialog.open;
     dialog.classList.add("floating");
     referenceTitle.textContent = boText(title);
     setOrigin();
-    referenceContent.innerHTML = content +
-      `<div class="source-row"><a href="${references[ref][2]}" target="_blank" rel="noopener noreferrer">睇 Cap. 123 官方條文 ↗</a></div>`;
+    referenceContent.innerHTML = content + (ref
+      ? `<div class="source-row"><a href="${references[ref][2]}" target="_blank" rel="noopener noreferrer">睇 Cap. 123 官方條文 ↗</a></div>`
+      : "");
     const keys = [...new Set([...referenceContent.querySelectorAll("[data-quiz-provision]")].map(node => node.dataset.quizProvision))];
     quizState = undefined;
     quizButton.hidden = keys.length === 0;
@@ -495,8 +476,10 @@ function createReferenceWindow(dialog) {
       quizState = { panel, keys, key: keys[0] };
       startProvisionQuiz();
     }
-    if (!dialog.open) dialog.show();
-    if (parent) positionBeside(parent.dialog.getBoundingClientRect());
+    if (opening) {
+      dialog.show();
+      if (parent?.dialog.open) positionBeside(parent.dialog.getBoundingClientRect());
+    }
     raise();
     referenceContent.scrollTop = 0;
     keepDialogInView();
@@ -527,9 +510,8 @@ function createReferenceWindow(dialog) {
     moveDialog(event.clientX - dialogDrag.x, event.clientY - dialogDrag.y);
   });
   dialogHead.addEventListener("lostpointercapture", () => { dialogDrag = null; });
-  dialog.addEventListener("keydown", event => {
-    if (event.key === "Escape" && dialog.classList.contains("floating")) dialog.close();
-  });
+  dialog.querySelector(".dialog-close-button").addEventListener("click", () => dialog.close());
+  dialog.addEventListener("cancel", event => event.preventDefault());
   referenceContent.addEventListener("toggle", keepDialogInView, true);
 
 
@@ -633,43 +615,52 @@ function createReferenceWindow(dialog) {
   const controller = {
     dialog, keepDialogInView, showReferences, showFrameworkDialog, jumpToSubsection,
     captureOrigin, restoreOrigin, setOrigin, returnToOrigin, showProvisionPath,
-    hasProvision: clause => quizState?.keys.length === 1 && quizState.keys[0] === clause,
     focus() { raise(); referenceTitle.focus({ preventScroll: true }); }
   };
   return controller;
 }
 
-function showFrameworkDialog(title, content, ref) {
-  primaryReferenceWindow.showFrameworkDialog(title, content, ref);
+function openReferenceWindow(key, render, parent) {
+  const existing = referenceWindows.get(key);
+  if (existing?.dialog.open) {
+    existing.focus();
+    return existing;
+  }
+
+  const anchor = parent ?? [...referenceWindows.values()].reverse().find(window => window.dialog.open);
+  const referenceWindow = createReferenceWindowFor(key);
+  render(referenceWindow, anchor);
+  referenceWindow.focus();
+  return referenceWindow;
 }
 
-function openProvision(clause, referenceWindow = primaryReferenceWindow) {
-  const [, title, english] = boPlainProvisions[clause];
-  const heading = [clause, title].filter(Boolean).join("｜");
-  referenceWindow.showFrameworkDialog(heading, `${english ? `<p class="bo-provision-source">${escapeText(english)}</p>` : ""}${expandClause(clause, true)}`, "bo", referenceWindow.parent);
+function showFrameworkDialog(key, title, content, ref) {
+  return openReferenceWindow(key, (window, anchor) => window.showFrameworkDialog(title, content, ref, anchor));
+}
+
+function showReferenceSources(keys, clause = null) {
+  const key = `references:${keys.join(",")}:${clause?.[0] ?? ""}`;
+  return openReferenceWindow(key, (window, anchor) => window.showReferences(keys, clause, anchor));
+}
+
+function openProvision(clause, parent) {
+  return openReferenceWindow(clause, (window, anchor) => {
+    const [, title, english] = boPlainProvisions[clause];
+    const heading = [clause, title].filter(Boolean).join("｜");
+    window.showFrameworkDialog(heading, `${english ? `<p class="bo-provision-source">${escapeText(english)}</p>` : ""}${expandClause(clause, true)}`, "bo", anchor);
+  }, parent);
 }
 
 function openLinkedProvision(reference, parent, trigger) {
   const [clause] = reference.match(/^§[0-9]+[A-Z]*|^Schedule [0-9]+/);
   const subsection = reference.slice(clause.length).match(/^(?:\([\dA-Za-z]+\))+/)?.[0];
-  const existing = parent.hasProvision(clause) ? parent
-    : primaryReferenceWindow.hasProvision(clause) && primaryReferenceWindow.dialog.open ? primaryReferenceWindow
-    : linkedReferenceWindows.get(clause);
-  if (existing?.dialog.open) {
-    if (existing !== parent) existing.setOrigin(parent.captureOrigin(trigger));
-    existing.focus();
-    if (subsection) existing.jumpToSubsection(subsection);
-    return;
-  }
   const origin = parent.captureOrigin(trigger);
-  const referenceWindow = createLinkedReferenceWindow(clause, parent);
-  openProvision(clause, referenceWindow);
-  referenceWindow.setOrigin(origin);
-  referenceWindow.focus();
+  const referenceWindow = openProvision(clause, parent);
+  if (referenceWindow !== parent) referenceWindow.setOrigin(origin);
   if (subsection) referenceWindow.jumpToSubsection(subsection);
 }
 
-function createLinkedReferenceWindow(key, parent) {
+function createReferenceWindowFor(key) {
   const dialog = referenceTemplate.cloneNode(true);
   const id = `linked-reference-${++referenceWindowSerial}`;
   dialog.id = id;
@@ -681,10 +672,9 @@ function createLinkedReferenceWindow(key, parent) {
   dialog.querySelector(".dialog-body").removeAttribute("id");
   document.body.append(dialog);
   const referenceWindow = createReferenceWindow(dialog);
-  referenceWindow.parent = parent;
-  linkedReferenceWindows.set(key, referenceWindow);
+  referenceWindows.set(key, referenceWindow);
   dialog.addEventListener("close", () => {
-    if (linkedReferenceWindows.get(key) === referenceWindow) linkedReferenceWindows.delete(key);
+    if (referenceWindows.get(key) === referenceWindow) referenceWindows.delete(key);
     dialog.remove();
     referenceWindow.returnToOrigin();
   });
@@ -693,14 +683,14 @@ function createLinkedReferenceWindow(key, parent) {
 
 function openProvisionFlow(keys, parent, trigger, clause) {
   const key = `flow:${parent.dialog.id}:${keys.join(",")}`;
-  const existing = linkedReferenceWindows.get(key);
+  const existing = referenceWindows.get(key);
   if (existing?.dialog.open) {
     existing.focus();
     return;
   }
 
   const origin = parent.captureOrigin(trigger);
-  const chart = createLinkedReferenceWindow(key, parent);
+  const chart = createReferenceWindowFor(key);
   const show = () => {
     chart.showFrameworkDialog(`${clause}｜條文流程圖`, renderProvisionFlow(clause, keys), "bo", parent);
     chart.setOrigin(origin);
@@ -721,9 +711,7 @@ function openProvisionFlow(keys, parent, trigger, clause) {
       chart.setOrigin(parent.captureOrigin(trigger));
       return;
     }
-    const sourceKey = `flow-source:${chart.dialog.id}:${targetClause}`;
-    const source = linkedReferenceWindows.get(sourceKey) ?? createLinkedReferenceWindow(sourceKey, chart);
-    if (!source.dialog.open) openProvision(targetClause, source);
+    const source = openProvision(targetClause, chart);
     source.setOrigin(chart.captureOrigin(node));
     source.showProvisionPath(targetClause, path);
   });
@@ -755,8 +743,7 @@ function renderProvisionFlow(clause, keys) {
 }
 
 window.addEventListener("resize", () => {
-  primaryReferenceWindow.keepDialogInView();
-  for (const referenceWindow of linkedReferenceWindows.values()) referenceWindow.keepDialogInView();
+  for (const referenceWindow of referenceWindows.values()) referenceWindow.keepDialogInView();
 });
 
 function renderProvisionIndex(framework) {
@@ -939,7 +926,7 @@ function showFrameworkSections(rowIndex) {
     `<section class="reference-item"><h3>${group}</h3><dl class="section-list">${sections.map(([section, meaning]) =>
       `<dt>${boText(section)}</dt><dd>${renderProvisionText(meaning)}${expandClause(section)}</dd>`).join("")}</dl></section>`
   ).join("") + (details.note ? `<p class="table-note">${boText(details.note)}</p>` : "");
-  showFrameworkDialog(details.title, content, details.ref);
+  showFrameworkDialog(`row:${current}:${rowIndex}`, details.title, content, details.ref);
 }
 
 document.addEventListener("click", event => {
@@ -992,8 +979,8 @@ page.addEventListener("click", event => {
   if (button.dataset.favoriteOpen) {
     const entry = favorites.get(button.dataset.favoriteOpen);
     if (!entry) return;
-    openProvision(entry.section);
-    if (entry.path) primaryReferenceWindow.jumpToSubsection(entry.path);
+    const referenceWindow = openProvision(entry.section);
+    if (entry.path) referenceWindow.jumpToSubsection(entry.path);
     return;
   }
   if (button.dataset.boProvision) {
@@ -1002,14 +989,14 @@ page.addEventListener("click", event => {
   }
   if (button.dataset.boFlow) {
     const [title, clauses] = boFlow[button.dataset.boFlow];
-    showFrameworkDialog(title, renderFlowClauses(clauses));
+    showFrameworkDialog(`framework-flow:${button.dataset.boFlow}`, title, renderFlowClauses(clauses));
     return;
   }
   if (button.dataset.frameworkClause) {
     const clause = button.dataset.frameworkClause;
     const [label, meaning] = boHighlights[clause];
     const [part] = courses.bo.framework.rows.find(([, , clauses]) => clauses.includes(clause));
-    showFrameworkDialog(`${clause}｜${label}`, `<section class="reference-item"><p class="detail-label">${boText(part)}</p><p>${renderProvisionText(meaning)}</p>${expandClause(clause)}</section>`);
+    showFrameworkDialog(`framework-highlight:${clause}`, `${clause}｜${label}`, `<section class="reference-item"><p class="detail-label">${boText(part)}</p><p>${renderProvisionText(meaning)}</p>${expandClause(clause)}</section>`);
     return;
   }
   if (button.dataset.frameworkRow !== undefined) {
@@ -1019,10 +1006,12 @@ page.addEventListener("click", event => {
   if (button.dataset.reference) {
     if (current === "bo" && button.dataset.clause) {
       const [title] = clauseNotes.bo[selectedStep];
-      showFrameworkDialog(title, renderFlowClauses(title.match(/§[0-9]+[A-Z]*/g)));
+      showFrameworkDialog(`lesson:bo:${selectedStep}`, title, renderFlowClauses(title.match(/§[0-9]+[A-Z]*/g)));
       return;
     }
-    primaryReferenceWindow.showReferences([button.dataset.reference], button.dataset.clause ? clauseNotes[current]?.[selectedStep] : null);
+    const clause = button.dataset.clause ? clauseNotes[current]?.[selectedStep] : null;
+    const keys = [button.dataset.reference];
+    showReferenceSources(keys, clause);
     return;
   }
   if (button.dataset.jump !== undefined) {
@@ -1055,7 +1044,7 @@ page.addEventListener("keydown", event => {
 });
 
 document.querySelector("#source-button").addEventListener("click", () => {
-  primaryReferenceWindow.showReferences(courses[current]?.refs ?? ["bo","regulation","mbisTime","mwisOverview","mbisForms","mwisForms"]);
+  showReferenceSources(courses[current]?.refs ?? ["bo","regulation","mbisTime","mwisOverview","mbisForms","mwisForms"]);
 });
 document.querySelector(".skip").addEventListener("click", event => {
   event.preventDefault();
