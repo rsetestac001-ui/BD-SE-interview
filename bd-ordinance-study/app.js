@@ -1,8 +1,12 @@
 const page = document.querySelector("#page");
 const dialog = document.querySelector("#reference-dialog");
+const dialogHead = dialog.querySelector(".dialog-head");
+const referenceTitle = dialog.querySelector("#reference-title");
+const referenceContent = dialog.querySelector("#reference-content");
 const navigation = [...document.querySelectorAll("[data-route]")];
 let current = "bo";
 let selectedStep = 0;
+let dialogDrag;
 
 function boText(value) {
   if (current !== "bo") return value;
@@ -201,6 +205,7 @@ function renderComparison() {
 }
 
 function setRoute(moveFocus = false) {
+  if (dialog.open) dialog.close();
   const hash = location.hash.slice(1);
   current = [...Object.keys(courses), "compare"].includes(hash) ? hash : "bo";
   selectedStep = 0;
@@ -232,8 +237,12 @@ function activateStep(index, focus = false) {
 }
 
 function showReferences(keys, clause = null) {
-  document.querySelector("#reference-title").textContent = boText(clause?.[0] ?? "官方依據");
-  document.querySelector("#reference-content").innerHTML = keys.map(key => {
+  if (dialog.open) dialog.close();
+  dialog.classList.remove("floating");
+  dialog.style.left = "";
+  dialog.style.top = "";
+  referenceTitle.textContent = boText(clause?.[0] ?? "官方依據");
+  referenceContent.innerHTML = keys.map(key => {
     const [title, context, url] = references[key];
     return `<div class="reference-item"><h3>${boText(title)}</h3><p>${boText(clause?.[1] ?? context)}</p><a href="${url}" target="_blank" rel="noopener noreferrer">開啟官方來源 ↗</a></div>`;
   }).join("");
@@ -241,18 +250,72 @@ function showReferences(keys, clause = null) {
 }
 
 function showFrameworkDialog(title, content, ref = "bo") {
-  document.querySelector("#reference-title").textContent = boText(title);
-  document.querySelector("#reference-content").innerHTML = content +
+  if (dialog.open && !dialog.classList.contains("floating")) dialog.close();
+  if (!dialog.open) {
+    dialog.style.left = "";
+    dialog.style.top = "";
+  }
+  dialog.classList.add("floating");
+  referenceTitle.textContent = boText(title);
+  referenceContent.innerHTML = content +
     `<div class="source-row"><a href="${references[ref][2]}" target="_blank" rel="noopener noreferrer">睇 Cap. 123 官方條文 ↗</a></div>`;
-  dialog.showModal();
-  dialog.scrollTop = 0;
+  if (!dialog.open) dialog.show();
+  referenceContent.scrollTop = 0;
+  keepDialogInView();
+}
+
+function moveDialog(left, top) {
+  const { width, height } = dialog.getBoundingClientRect();
+  const viewport = document.documentElement;
+  const clamp = (value, limit) => Math.max(8, Math.min(value, limit - 8));
+  dialog.style.left = `${clamp(left, viewport.clientWidth - width)}px`;
+  dialog.style.top = `${clamp(top, viewport.clientHeight - height)}px`;
+}
+
+function keepDialogInView() {
+  if (!dialog.open || !dialog.classList.contains("floating") || !dialog.style.left) return;
+  const { left, top } = dialog.getBoundingClientRect();
+  moveDialog(left, top);
+}
+
+dialogHead.addEventListener("pointerdown", event => {
+  if (!dialog.classList.contains("floating") || !event.isPrimary || event.button !== 0 || event.target.closest("button")) return;
+  const { left, top } = dialog.getBoundingClientRect();
+  dialogDrag = { id: event.pointerId, x: event.clientX - left, y: event.clientY - top };
+  dialogHead.setPointerCapture(event.pointerId);
+});
+dialogHead.addEventListener("pointermove", event => {
+  if (dialogDrag?.id !== event.pointerId || !dialog.open) return;
+  moveDialog(event.clientX - dialogDrag.x, event.clientY - dialogDrag.y);
+});
+dialogHead.addEventListener("lostpointercapture", () => { dialogDrag = null; });
+dialog.addEventListener("keydown", event => {
+  if (event.key === "Escape" && dialog.classList.contains("floating")) dialog.close();
+});
+referenceContent.addEventListener("toggle", keepDialogInView, true);
+window.addEventListener("resize", keepDialogInView);
+
+function expandClause(clause) {
+  const notes = boDetailedClauses[clause];
+  return `<details class="clause-more"><summary aria-label="詳細解釋 ${boText(clause)}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
+    <dl>${notes.map(([label, meaning]) => `<div><dt>${boText(label)}</dt><dd>${boText(meaning)}</dd></div>`).join("")}</dl></details>`;
+}
+
+function renderFlowClauses(clauses) {
+  return flowClauseGroups(clauses).map(([location, articles]) => {
+    const rows = articles.map(clause => {
+      const [label, meaning = boFlowClauseNotes[clause]] = boFlowClauseLabels[clause] ?? boHighlights[clause];
+      return `<div><dt><span>${boText(clause)}</span> ${label}</dt><dd>${boText(meaning)}${expandClause(clause)}</dd></div>`;
+    }).join("");
+    return `<section class="bo-flow-clause-group"><h3>${boText(location)}</h3><dl class="bo-clause-breakdown">${rows}</dl></section>`;
+  }).join("");
 }
 
 function showFrameworkSections(rowIndex) {
   const details = courses[current].framework.rows[rowIndex].at(-1);
   const content = details.groups.map(([group, sections]) =>
     `<section class="reference-item"><h3>${group}</h3><dl class="section-list">${sections.map(([section, meaning]) =>
-      `<dt>${boText(section)}</dt><dd>${boText(meaning)}</dd>`).join("")}</dl></section>`
+      `<dt>${boText(section)}</dt><dd>${boText(meaning)}${expandClause(section)}</dd>`).join("")}</dl></section>`
   ).join("") + (details.note ? `<p class="table-note">${boText(details.note)}</p>` : "");
   showFrameworkDialog(details.title, content, details.ref);
 }
@@ -262,21 +325,14 @@ page.addEventListener("click", event => {
   if (!button) return;
   if (button.dataset.boFlow) {
     const [title, clauses] = boFlow[button.dataset.boFlow];
-    const breakdown = flowClauseGroups(clauses).map(([location, articles]) => {
-      const rows = articles.map(clause => {
-        const [label, meaning = boFlowClauseNotes[clause]] = boFlowClauseLabels[clause] ?? boHighlights[clause];
-        return `<div><dt><span>${boText(clause)}</span> ${label}</dt><dd>${boText(meaning)}</dd></div>`;
-      }).join("");
-      return `<section class="bo-flow-clause-group"><h3>${boText(location)}</h3><dl class="bo-clause-breakdown">${rows}</dl></section>`;
-    }).join("");
-    showFrameworkDialog(title, breakdown);
+    showFrameworkDialog(title, renderFlowClauses(clauses));
     return;
   }
   if (button.dataset.frameworkClause) {
     const clause = button.dataset.frameworkClause;
     const [label, meaning] = boHighlights[clause];
     const [part] = courses.bo.framework.rows.find(([, , clauses]) => clauses.includes(clause));
-    showFrameworkDialog(`${clause}｜${label}`, `<section class="reference-item"><p class="detail-label">${boText(part)}</p><p>${boText(meaning)}</p></section>`);
+    showFrameworkDialog(`${clause}｜${label}`, `<section class="reference-item"><p class="detail-label">${boText(part)}</p><p>${boText(meaning)}</p>${expandClause(clause)}</section>`);
     return;
   }
   if (button.dataset.frameworkRow !== undefined) {
@@ -284,6 +340,11 @@ page.addEventListener("click", event => {
     return;
   }
   if (button.dataset.reference) {
+    if (current === "bo" && button.dataset.clause) {
+      const [title] = clauseNotes.bo[selectedStep];
+      showFrameworkDialog(title, renderFlowClauses(title.match(/§[0-9]+[A-Z]*/g)));
+      return;
+    }
     showReferences([button.dataset.reference], button.dataset.clause ? clauseNotes[current]?.[selectedStep] : null);
     return;
   }
