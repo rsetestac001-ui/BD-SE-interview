@@ -231,8 +231,12 @@ page.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
   if (button.dataset.boFlow) {
-    const [title, clauses, meaning] = boFlow[button.dataset.boFlow];
-    showFrameworkDialog(title, `<section class="reference-item"><p class="detail-label">${clauses}</p><p>${meaning}</p></section>`);
+    const [title, , clauses] = boFlow[button.dataset.boFlow];
+    const breakdown = clauses.map(clause => {
+      const [label, meaning = boFlowClauseNotes[clause]] = boFlowClauseLabels[clause] ?? boHighlights[clause];
+      return `<div><dt><span>${clause}</span> ${label}</dt><dd>${meaning}</dd></div>`;
+    }).join("");
+    showFrameworkDialog(title, `<dl class="bo-clause-breakdown">${breakdown}</dl>`);
     return;
   }
   if (button.dataset.frameworkClause) {
