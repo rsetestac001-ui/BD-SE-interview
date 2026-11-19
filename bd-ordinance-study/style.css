@@ -15,6 +15,8 @@ dialog{color:var(--ink);max-width:550px;width:calc(100% - 30px);max-height:min(7
 .framework tbody th{width:21%}
 .framework th:last-child,.framework td:last-child{width:23%}
 .section-summary{line-height:1.35;margin-bottom:6px}
+.framework-highlights{display:grid;gap:4px}
+.framework-highlights .source-chip{justify-self:start;min-height:36px;width:100%;padding:4px 6px;line-height:1.35}
 .section-list{display:grid;grid-template-columns:max-content 1fr;gap:10px 12px;margin:10px 0 0}
 .section-list dt{font-weight:700}
 .section-list dd{margin:0}
