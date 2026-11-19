@@ -54,3 +54,67 @@ dialog{color:var(--ink);max-width:550px;width:calc(100% - 30px);max-height:min(7
 .bo-flow-intro strong{color:var(--ink)}
 .bo-flow-clause-group+.bo-flow-clause-group{margin-top:16px}
 .bo-flow-clause-group h3{margin:0 0 7px;color:var(--green);font-size:14px}
+
+dialog.floating {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  margin: auto;
+  max-height: min(calc(100dvh - 16px), 680px);
+  width: calc(100% - 24px);
+  overflow: hidden;
+  padding: 0;
+}
+dialog.floating[open] { display: flex; flex-direction: column; }
+dialog.floating[style*="left"] { inset: auto; margin: 0; }
+.floating .dialog-head {
+  flex: none;
+  padding: 14px 18px;
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.floating .dialog-head:active { cursor: grabbing; }
+.floating .dialog-head form { flex: none; }
+.floating .dialog-head button { cursor: pointer; }
+.floating #reference-title {
+  overflow-wrap: anywhere;
+}
+.floating #reference-title::after {
+  content: "拖動頂欄移動";
+  display: block;
+  margin-top: 3px;
+  font-size: .75rem;
+  font-weight: 500;
+  color: var(--green);
+}
+.floating #reference-content {
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0 18px 16px;
+}
+.floating #reference-content > .reference-item:first-child { border-top: 0; }
+.clause-more { margin: 8px 0 2px; }
+.clause-more > summary {
+  width: fit-content;
+  padding: 4px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-weight: 750;
+  color: var(--green);
+  cursor: pointer;
+}
+.clause-more > dl {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 11px;
+  background: #f2f6ef;
+  border-radius: 8px;
+}
+.clause-more > dl dt { font-weight: 750; color: var(--green); }
+.clause-more > dl dd { margin: 0; color: var(--ink); }
+.clause-more:not([open]) .collapse-label,
+.clause-more[open] .expand-label { display: none; }
