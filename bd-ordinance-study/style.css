@@ -240,7 +240,7 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .bo-provision-source { color: var(--muted); font-size: .82rem; margin: 8px 0; }
 
 .dialog-actions { display: flex; align-items: center; gap: 7px; flex: none; }
-.dialog-head .dialog-quiz-button {
+.dialog-head .dialog-quiz-button, .dialog-head .dialog-flow-button {
   width: auto;
   min-height: 37px;
   padding: 0 10px;
@@ -252,6 +252,44 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   white-space: nowrap;
 }
 .dialog-head .dialog-quiz-button[aria-expanded="true"] { background: #e6f1eb; color: var(--green); }
+.dialog-head .dialog-flow-button { background: #e7f0fb; border-color: #b8cfe8; color: #214572; }
+.dialog-head .dialog-flow-button:hover { background: #d9e8fa; }
+.provision-chart { margin: 12px 0; }
+.provision-chart-intro { color: var(--muted); font-size: .9rem; }
+.provision-chart-group { margin-top: 14px; padding: 12px; border: 1px solid #c9dbef; border-radius: 10px; background: #f2f7fd; }
+.provision-chart-group h3 { margin-bottom: 8px; color: #214572; font-size: 1rem; }
+.provision-chart-rows { display: grid; gap: 6px; }
+.provision-chart-rows.is-connected > .provision-chart-row + .provision-chart-row::before {
+  content: "↓";
+  grid-column: 1 / -1;
+  justify-self: center;
+  color: #214572;
+  font-weight: 750;
+}
+.provision-chart-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); gap: 6px; }
+.provision-chart-node {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px;
+  border: 1px solid #bfd2e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #193c65;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.provision-chart-node:hover { border-color: #517eac; background: #e7f0fb; }
+.provision-chart-node span { font-size: .74rem; color: #355b85; font-weight: 750; }
+.provision-chart-node strong { font-size: .89rem; }
+.provision-chart-node small { color: var(--muted); font-size: .79rem; }
+@media (max-width: 480px) {
+  .floating .dialog-head { flex-wrap: wrap; }
+  .dialog-head .dialog-actions { margin-left: auto; }
+}
 .reference-quiz {
   margin: 12px 0;
   padding: 12px;
