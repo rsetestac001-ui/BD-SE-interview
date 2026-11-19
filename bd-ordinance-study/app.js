@@ -196,23 +196,33 @@ function renderBoFlowchart() {
   };
   const arrow = '<span class="bo-flow-arrow" aria-hidden="true">↓</span>';
   return `<section class="bo-flowchart" aria-label="BO 框架流程圖">
-    ${heading("BO 框架流程圖", "撳任何一格，睇條文重點")}
+    ${heading("BO 框架流程圖", "由立法初衷睇起，撳任何一格睇條文重點")}
     <div class="bo-flow-board">
+      <div class="bo-flow-purpose">
+        <p class="bo-flow-purpose-eyebrow">立法初衷｜《建築物條例》（Cap. 123）詳題</p>
+        <h3>點解要設立《建築物條例》？</h3>
+        <p>設立條例嘅初衷唔係為咗多做手續，而係為咗<strong>保障公眾安全、結構穩定同環境衞生</strong>。條例詳題（Long Title）明確訂出三大目的，覆蓋一幢樓由起樓、日常保養到消除風險嘅整個生命週期：</p>
+        <ol class="bo-flow-pillars">
+          <li><strong>01｜源頭把關：規劃、設計同建造</strong><span>透過專業人士／承建商註冊、批圖、開工同意、監工同入伙紙制度，確保新建同改動工程合乎安全及衞生標準（第 1、2 部）。</span></li>
+          <li><strong>02｜防患未然：定期檢驗同修葺</strong><span>透過強制驗樓及強制驗窗制度，防止現有樓宇隨樓齡老化失修而變得不安全（第 2A 部）。</span></li>
+          <li><strong>03｜消除風險：危險樓宇、土地同違建</strong><span>賦權建築事務監督發出停工、拆卸、修葺及勘測等命令，令危險建築物、危險斜坡／土地同違建回復安全（第 2、3、4 部）。</span></li>
+        </ol>
+      </div>
       <div class="bo-flow-intro">
-        <p><strong>點解要查工程？</strong> 例如想拆幅牆，第一個問題係可唔可以直接開工。先搞清楚工程做啲咩，再按條例分辨要入則、可以行小型工程程序，定有法定豁免。呢個判斷先決定要唔要搵人、交咩文件同幾時開得工。</p>
+        <p><strong>由立法目的落到工程流程：</strong>正因為法例要由源頭守住樓宇安全，準備做工程時先要核對工程受唔受規管、行邊種法定程序同委任邊類合資格人士；樓宇落成後則靠定期檢驗同執法機制持續把關。</p>
         <p>搵條文時由大到細。例如 <strong>第 123 章 › 第 2 部（樓宇管制） › 第 14 條</strong>。第 1、2、2A 條係第 1 部之前嘅開頭條文。</p>
       </div>
-      <div class="bo-flow-main" role="group" aria-label="由確認工程到完工">
+      <div class="bo-flow-main" role="group" aria-label="由法例適用、開工完工到定期檢驗">
         ${node("opening")}${arrow}
         ${node("definition")}${arrow}
         ${node("choose")}${arrow}
         <div class="bo-flow-fork" role="group" aria-label="三種開工程序">
           ${["standard", "minor", "exempt"].map(key => `<div>${node(key)}</div>`).join("")}
         </div>
-        ${arrow}${node("people")}${arrow}${node("complete")}
+        ${arrow}${node("people")}${arrow}${node("complete")}${arrow}${node("inspection")}
       </div>
       <div class="bo-flow-lookup">
-        <h3>工程出事或收到決定，查邊度？</h3>
+        <h3>工程出事、樓宇／斜坡有危險或收到決定，查邊度？</h3>
         <div class="bo-flow-grid">
           ${["orders", "procedure", "offences", "appeals"].map(node).join("")}
         </div>
@@ -271,28 +281,18 @@ function renderComparison() {
     '<div class="next"><a href="#bo">返到 BO 框架 <span aria-hidden="true">→</span></a></div>';
 }
 
-function renderTest() {
-  return hero({
-    eyebrow:"TEST", title:"test",
-    intro:"呢個係測試分頁，用來確認改動可以順利推送到 GitHub 並部署到網站。"
-  }, "test") + '<div class="next"><a href="#bo">返到 BO 框架 <span aria-hidden="true">→</span></a></div>';
-}
-
 function setRoute(moveFocus = false) {
   const hash = location.hash.slice(1);
-  current = [...Object.keys(courses), "compare", "favorites", "test"].includes(hash) ? hash : "bo";
+  current = [...Object.keys(courses), "compare", "favorites"].includes(hash) ? hash : "bo";
   selectedStep = 0;
   const course = courses[current] ?? comparison;
-  const routeName = current === "favorites" ? "收藏" : current === "test" ? "test" : course.name;
-  const routeTitle = current === "favorites" ? "收藏" : current === "test" ? "test" : course.title;
-  document.querySelector("#crumb").textContent = routeName;
-  document.title = `${routeTitle}｜BD 面試研習室`;
+  document.querySelector("#crumb").textContent = current === "favorites" ? "收藏" : course.name;
+  document.title = `${current === "favorites" ? "收藏" : course.title}｜BD 面試研習室`;
   for (const link of navigation) {
     if (link.dataset.route === current) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   }
   page.innerHTML = current === "favorites" ? renderFavorites()
-    : current === "test" ? renderTest()
     : current === "compare" ? renderComparison() : renderCourse(course);
   if (moveFocus) {
     window.scrollTo(0, 0);
