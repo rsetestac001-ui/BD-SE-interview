@@ -318,6 +318,21 @@ function renderProvisionIndex(framework) {
     }).join("")}</details>`;
 }
 
+const provisionEmphasis = /(?<term>\b[A-Z][A-Za-z]+(?:[ -]+[A-Za-z]+){0,8}\s*（[^（）\n]{1,24}）|\b[A-Z]{2,5}\s*（[^（）\n]{1,24}）)|(?<time>(?:\d+(?:\.\d+)?|[一二兩三四五六七八九十百]+)\s*(?:(?:個\s*)?月|日|年|星期|小時)(?:\s*(?:之?內|屆滿|期滿|前|後))?(?![\d年月日]))|(?<rule>唔可以|唔准|唔需要|不得|不准|毋須|無須|無需|必須|要先|須先|須在|須於|須由|須向|須按|須以|須將|要喺|要由|要向|要按|除非|除外|但書|例外)/gu;
+
+function renderProvisionText(text) {
+  const value = boText(text);
+  let html = "";
+  let offset = 0;
+  for (const match of value.matchAll(provisionEmphasis)) {
+    const kind = match.groups.term ? "term" : match.groups.time ? "time" : "rule";
+    html += escapeText(value.slice(offset, match.index));
+    html += `<mark class="provision-mark provision-mark--${kind}">${escapeText(match[0])}</mark>`;
+    offset = match.index + match[0].length;
+  }
+  return html + escapeText(value.slice(offset));
+}
+
 function renderProvisionTree(entries) {
   const root = { items: [], children: new Map() };
   for (const { label, title, text } of entries) {
@@ -349,7 +364,7 @@ function renderProvisionTree(entries) {
   }
   const renderItems = (items, depth) => items.map(item => {
     if (!item.items) {
-      return `<li class="provision-copy">${item.description ? `<strong>${escapeText(boText(item.description))}</strong>` : ""}<p>${escapeText(boText(item.text))}</p></li>`;
+      return `<li class="provision-copy">${item.description ? `<strong>${renderProvisionText(item.description)}</strong>` : ""}<p>${renderProvisionText(item.text)}</p></li>`;
     }
     const label = depth === 0 && item.number.startsWith("(") ? `第 ${item.number} 款` : item.number;
     return `<li class="provision-branch"><div class="provision-number">${escapeText(label)}</div><ol role="list">${renderItems(item.items, depth + 1)}</ol></li>`;
@@ -376,6 +391,7 @@ function expandClause(clause, open = false) {
   const mode = root === "§21" ? "逐款白話解釋" : "逐款讀本 · 由中文原文轉成較口語嘅寫法，可對照官方原文";
   return `<details class="clause-more"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
     <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
+    <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">專業詞</li></ul>
     ${renderProvisionTree(details.filter(({ label }) => include(label)))}</details>`;
 }
 
