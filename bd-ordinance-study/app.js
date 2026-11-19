@@ -100,25 +100,45 @@ function practiceCard(item, index) {
   </div></details>`;
 }
 
+function flowClauseGroups(clauses) {
+  const groups = new Map();
+  for (const clause of clauses) {
+    const [location] = courses.bo.framework.rows.find(([, , highlights, details]) =>
+      highlights.includes(clause) || details?.groups.some(([, entries]) =>
+        entries.some(([section]) => section === clause))
+    );
+    if (!groups.has(location)) groups.set(location, []);
+    groups.get(location).push(clause);
+  }
+  return Array.from(groups);
+}
+
 function renderBoFlowchart() {
   const node = (key) => {
     const [title, clauses] = boFlow[key];
+    const labels = flowClauseGroups(clauses).map(([location, articles]) =>
+      `<small><b>${boText(location.split("（")[0])}</b> › ${articles.map(boText).join("、")}</small>`
+    ).join("");
     return `<button type="button" class="bo-flow-node" data-bo-flow="${key}" aria-haspopup="dialog">
-      <strong>${title}</strong><small>${boText(clauses)}</small>
+      <strong>${title}</strong>${labels}
     </button>`;
   };
   const arrow = '<span class="bo-flow-arrow" aria-hidden="true">↓</span>';
   return `<section class="bo-flowchart" aria-label="BO 框架流程圖">
     ${heading("BO 框架流程圖", "撳任何一格，睇條文重點")}
     <div class="bo-flow-board">
+      <div class="bo-flow-intro">
+        <p><strong>點解要查工程？</strong> 例如想拆幅牆，第一個問題係可唔可以直接開工。先搞清楚工程做啲咩，再按條例分辨要入則、可以行小型工程程序，定有法定豁免。呢個判斷先決定要唔要搵人、交咩文件同幾時開得工。</p>
+        <p>搵條文時由大到細。例如 <strong>第 123 章 › 第 2 部（樓宇管制） › 第 14 條</strong>。第 1、2、2A 條係第 1 部之前嘅開頭條文。</p>
+      </div>
       <div class="bo-flow-main" role="group" aria-label="由確認工程到完工">
+        ${node("opening")}${arrow}
         ${node("definition")}${arrow}
-        ${node("people")}${arrow}
         ${node("choose")}${arrow}
         <div class="bo-flow-fork" role="group" aria-label="三種開工程序">
           ${["standard", "minor", "exempt"].map(key => `<div>${node(key)}</div>`).join("")}
         </div>
-        ${arrow}${node("complete")}
+        ${arrow}${node("people")}${arrow}${node("complete")}
       </div>
       <div class="bo-flow-lookup">
         <h3>工程出事或收到決定，查邊度？</h3>
@@ -241,12 +261,15 @@ page.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
   if (button.dataset.boFlow) {
-    const [title, , clauses] = boFlow[button.dataset.boFlow];
-    const breakdown = clauses.map(clause => {
-      const [label, meaning = boFlowClauseNotes[clause]] = boFlowClauseLabels[clause] ?? boHighlights[clause];
-      return `<div><dt><span>${boText(clause)}</span> ${label}</dt><dd>${boText(meaning)}</dd></div>`;
+    const [title, clauses] = boFlow[button.dataset.boFlow];
+    const breakdown = flowClauseGroups(clauses).map(([location, articles]) => {
+      const rows = articles.map(clause => {
+        const [label, meaning = boFlowClauseNotes[clause]] = boFlowClauseLabels[clause] ?? boHighlights[clause];
+        return `<div><dt><span>${boText(clause)}</span> ${label}</dt><dd>${boText(meaning)}</dd></div>`;
+      }).join("");
+      return `<section class="bo-flow-clause-group"><h3>${boText(location)}</h3><dl class="bo-clause-breakdown">${rows}</dl></section>`;
     }).join("");
-    showFrameworkDialog(title, `<dl class="bo-clause-breakdown">${breakdown}</dl>`);
+    showFrameworkDialog(title, breakdown);
     return;
   }
   if (button.dataset.frameworkClause) {
