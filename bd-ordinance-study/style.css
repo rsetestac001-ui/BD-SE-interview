@@ -106,16 +106,26 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   color: var(--green);
   cursor: pointer;
 }
-.clause-more > dl {
-  display: grid;
-  gap: 8px;
+.provision-tree, .provision-tree ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.provision-tree {
   margin: 8px 0 0;
   padding: 11px;
   background: #f2f6ef;
   border-radius: 8px;
+  overflow-wrap: anywhere;
 }
-.clause-more > dl dt { font-weight: 750; color: var(--green); }
-.clause-more > dl dd { margin: 0; color: var(--ink); }
+.provision-tree > li + li { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); }
+.provision-branch > ol > .provision-branch {
+  margin: 5px 0 5px clamp(4px, 1vw, 12px);
+  padding-left: clamp(6px, 1.5vw, 16px);
+  border-left: 2px solid var(--line);
+}
+.provision-number, .provision-copy > strong { font-weight: 750; color: var(--green); }
+.provision-copy > strong { font-size: .92em; }
 .clause-more:not([open]) .collapse-label,
 .clause-more[open] .expand-label { display: none; }
 
@@ -140,5 +150,3 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .bo-provision-index ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 7px 0 0; padding: 0; list-style: none; }
 .bo-provision-index .source-chip { text-align: left; }
 .bo-provision-source { color: var(--muted); font-size: .82rem; margin: 8px 0; }
-.clause-more > dl > div + div { padding-top: 8px; border-top: 1px solid var(--line); }
-.clause-more > dl dd { overflow-wrap: anywhere; }
