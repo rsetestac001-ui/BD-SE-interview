@@ -271,6 +271,13 @@ function renderComparison() {
     '<div class="next"><a href="#bo">返到 BO 框架 <span aria-hidden="true">→</span></a></div>';
 }
 
+function renderTest() {
+  return hero({
+    eyebrow:"TEST", title:"test",
+    intro:"呢個係測試分頁，用來確認改動可以順利推送到 GitHub 並部署到網站。"
+  }, "test") + '<div class="next"><a href="#bo">返到 BO 框架 <span aria-hidden="true">→</span></a></div>';
+}
+
 function setRoute(moveFocus = false) {
   primaryReferenceWindow.dialog.close();
   for (const { dialog } of linkedReferenceWindows.values()) {
@@ -279,16 +286,19 @@ function setRoute(moveFocus = false) {
   }
   linkedReferenceWindows.clear();
   const hash = location.hash.slice(1);
-  current = [...Object.keys(courses), "compare", "favorites"].includes(hash) ? hash : "bo";
+  current = [...Object.keys(courses), "compare", "favorites", "test"].includes(hash) ? hash : "bo";
   selectedStep = 0;
   const course = courses[current] ?? comparison;
-  document.querySelector("#crumb").textContent = current === "favorites" ? "收藏" : course.name;
-  document.title = `${current === "favorites" ? "收藏" : course.title}｜BD 面試研習室`;
+  const routeName = current === "favorites" ? "收藏" : current === "test" ? "test" : course.name;
+  const routeTitle = current === "favorites" ? "收藏" : current === "test" ? "test" : course.title;
+  document.querySelector("#crumb").textContent = routeName;
+  document.title = `${routeTitle}｜BD 面試研習室`;
   for (const link of navigation) {
     if (link.dataset.route === current) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   }
   page.innerHTML = current === "favorites" ? renderFavorites()
+    : current === "test" ? renderTest()
     : current === "compare" ? renderComparison() : renderCourse(course);
   if (moveFocus) {
     window.scrollTo(0, 0);
