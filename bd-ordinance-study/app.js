@@ -319,6 +319,7 @@ function createReferenceWindow(dialog) {
   const referenceTitle = dialog.querySelector(".dialog-title");
   const referenceContent = dialog.querySelector(".dialog-body");
   const quizButton = dialog.querySelector(".dialog-quiz-button");
+  const flowButton = dialog.querySelector(".dialog-flow-button");
   const referenceOrigin = document.createElement("div");
   referenceOrigin.className = "reference-origin";
   referenceOrigin.hidden = true;
@@ -355,11 +356,27 @@ function createReferenceWindow(dialog) {
       target = branches.find(node => node.dataset.provisionPath === number);
       number = number.slice(0, Math.max(0, number.lastIndexOf("(")));
     }
-    if (!target) return;
+    if (!target) return false;
     target.closest(".clause-more").open = true;
     target.tabIndex = -1;
     target.focus({ preventScroll: true });
     referenceContent.scrollTop += target.getBoundingClientRect().top - referenceContent.getBoundingClientRect().top - 10;
+    return true;
+  }
+
+  function showProvisionPath(clause, path) {
+    path = path.replace(/\) (?=表)/, ")");
+    const scope = [...referenceContent.querySelectorAll("[data-quiz-provision]")]
+      .find(node => node.dataset.quizProvision === clause &&
+        (!path || [...node.querySelectorAll("[data-provision-path]")].some(item => item.dataset.provisionPath === path)));
+    if (!dialog.open || !scope) return false;
+    raise();
+    if (path) return jumpToSubsection(path, scope);
+    scope.open = true;
+    const summary = scope.querySelector("summary");
+    summary.focus({ preventScroll: true });
+    referenceContent.scrollTop += summary.getBoundingClientRect().top - referenceContent.getBoundingClientRect().top - 10;
+    return true;
   }
 
   dialog.addEventListener("pointerdown", raise);
@@ -413,7 +430,7 @@ function createReferenceWindow(dialog) {
   }
 
   function restoreOrigin({ trigger, scrollTop }) {
-    if (!dialog.open || !referenceContent.contains(trigger)) return false;
+    if (!dialog.open || !dialog.contains(trigger) || trigger.hidden) return false;
     raise();
     referenceContent.scrollTop = scrollTop;
     trigger.focus({ preventScroll: true });
@@ -427,6 +444,7 @@ function createReferenceWindow(dialog) {
   function showReferences(keys, clause = null) {
     if (dialog.open) dialog.close();
     quizButton.hidden = true;
+    flowButton.hidden = true;
     quizButton.setAttribute("aria-expanded", "false");
     quizState = undefined;
     setOrigin();
@@ -455,6 +473,7 @@ function createReferenceWindow(dialog) {
     const keys = [...new Set([...referenceContent.querySelectorAll("[data-quiz-provision]")].map(node => node.dataset.quizProvision))];
     quizState = undefined;
     quizButton.hidden = keys.length === 0;
+    flowButton.hidden = keys.length === 0;
     quizButton.setAttribute("aria-expanded", "false");
     if (keys.length) {
       const panel = document.createElement("section");
@@ -543,6 +562,10 @@ function createReferenceWindow(dialog) {
       <button type="button" class="source-chip" data-quiz-action="next">${index + 1 === questions.length ? "睇結果" : "下一題"}</button>` : ""}`;
   }
 
+  flowButton.addEventListener("click", () => {
+    if (quizState) openProvisionFlow(quizState.keys, controller, flowButton, quizState.key);
+  });
+
   quizButton.addEventListener("click", () => {
     const { panel } = quizState;
     panel.hidden = !panel.hidden;
@@ -599,7 +622,7 @@ function createReferenceWindow(dialog) {
 
   const controller = {
     dialog, keepDialogInView, showReferences, showFrameworkDialog, jumpToSubsection,
-    captureOrigin, restoreOrigin, setOrigin, returnToOrigin,
+    captureOrigin, restoreOrigin, setOrigin, returnToOrigin, showProvisionPath,
     hasProvision: clause => quizState?.keys.length === 1 && quizState.keys[0] === clause,
     focus() { raise(); referenceTitle.focus({ preventScroll: true }); }
   };
@@ -629,6 +652,14 @@ function openLinkedProvision(reference, parent, trigger) {
     return;
   }
   const origin = parent.captureOrigin(trigger);
+  const referenceWindow = createLinkedReferenceWindow(clause, parent);
+  openProvision(clause, referenceWindow);
+  referenceWindow.setOrigin(origin);
+  referenceWindow.focus();
+  if (subsection) referenceWindow.jumpToSubsection(subsection);
+}
+
+function createLinkedReferenceWindow(key, parent) {
   const dialog = referenceTemplate.cloneNode(true);
   const id = `linked-reference-${++referenceWindowSerial}`;
   dialog.id = id;
@@ -641,16 +672,75 @@ function openLinkedProvision(reference, parent, trigger) {
   document.body.append(dialog);
   const referenceWindow = createReferenceWindow(dialog);
   referenceWindow.parent = parent;
-  linkedReferenceWindows.set(clause, referenceWindow);
+  linkedReferenceWindows.set(key, referenceWindow);
   dialog.addEventListener("close", () => {
-    if (linkedReferenceWindows.get(clause) === referenceWindow) linkedReferenceWindows.delete(clause);
+    if (linkedReferenceWindows.get(key) === referenceWindow) linkedReferenceWindows.delete(key);
     dialog.remove();
     referenceWindow.returnToOrigin();
   });
-  openProvision(clause, referenceWindow);
-  referenceWindow.setOrigin(origin);
-  referenceWindow.focus();
-  if (subsection) referenceWindow.jumpToSubsection(subsection);
+  return referenceWindow;
+}
+
+function openProvisionFlow(keys, parent, trigger, clause) {
+  const key = `flow:${parent.dialog.id}:${keys.join(",")}`;
+  const existing = linkedReferenceWindows.get(key);
+  if (existing?.dialog.open) {
+    existing.focus();
+    return;
+  }
+
+  const origin = parent.captureOrigin(trigger);
+  const chart = createLinkedReferenceWindow(key, parent);
+  const show = () => {
+    chart.showFrameworkDialog(`${clause}｜條文流程圖`, renderProvisionFlow(clause, keys), "bo", parent);
+    chart.setOrigin(origin);
+    chart.focus();
+  };
+  chart.dialog.addEventListener("change", event => {
+    if (!event.target.matches("[data-provision-flow-select]")) return;
+    clause = event.target.value;
+    show();
+    chart.dialog.querySelector("[data-provision-flow-select]").focus({ preventScroll: true });
+  });
+  chart.dialog.addEventListener("click", event => {
+    const node = event.target.closest("[data-provision-flow-path]");
+    if (!node) return;
+    const path = node.dataset.provisionFlowPath;
+    if (parent.showProvisionPath(clause, path)) {
+      chart.setOrigin(parent.captureOrigin(trigger));
+      return;
+    }
+    const sourceKey = `flow-source:${chart.dialog.id}:${clause}`;
+    const source = linkedReferenceWindows.get(sourceKey) ?? createLinkedReferenceWindow(sourceKey, chart);
+    if (!source.dialog.open) openProvision(clause, source);
+    source.setOrigin(chart.captureOrigin(node));
+    source.showProvisionPath(clause, path);
+  });
+  show();
+}
+
+function renderProvisionFlow(clause, keys) {
+  const title = boPlainProvisions[clause][1];
+  const fallback = boProvisionHeadings[clause];
+  const [intro, groups] = boProvisionFlows[clause] ?? [
+    "呢張圖按款號幫你搵內容。撳一格就可以睇嗰款。",
+    [["款項對照", typeof fallback === "object"
+      ? Object.entries(fallback).map(([path, heading]) => [[path.replace("-", " 至 "), heading]])
+      : [[["", fallback || title]]], false]]
+  ];
+  const picker = keys.length > 1 ? `<label class="quiz-picker">揀條文 <select data-provision-flow-select>${keys.map(key =>
+    `<option value="${escapeText(key)}"${key === clause ? " selected" : ""}>${escapeText(boText(key))}｜${escapeText(boPlainProvisions[key][1])}</option>`
+  ).join("")}</select></label>` : "";
+  return `<div class="provision-chart">
+    ${picker}<p class="provision-chart-intro">${escapeText(intro)}</p>
+    ${groups.map(([heading, rows, connected = true]) => `<section class="provision-chart-group">
+      <h3>${escapeText(heading)}</h3>
+      <div class="provision-chart-rows${connected ? " is-connected" : ""}">
+      ${rows.map(row => `<div class="provision-chart-row">${row.map(([path, label, note]) => `<button type="button" class="provision-chart-node" data-provision-flow-path="${escapeText(path)}">
+        <span>${escapeText(path || boText(clause))}</span><strong>${escapeText(label)}</strong>${note ? `<small>${escapeText(note)}</small>` : ""}
+      </button>`).join("")}</div>`).join("")}</div>
+    </section>`).join("")}
+  </div>`;
 }
 
 window.addEventListener("resize", () => {
