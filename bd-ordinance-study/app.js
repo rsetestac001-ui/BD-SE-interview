@@ -4,6 +4,16 @@ const navigation = [...document.querySelectorAll("[data-route]")];
 let current = "bo";
 let selectedStep = 0;
 
+function boText(value) {
+  if (current !== "bo") return value;
+  return value
+    .replace(/\bPart\s+(\d+[A-Z]*)\b/g, "第 $1 部")
+    .replace(/\bSchedule\s+(\d+)\b/g, "附表 $1")
+    .replace(/§\s*(\d+[A-Za-z]*(?:\([\da-zA-Z]+\))*)(?:[–-](\([\da-zA-Z]+\)))?/g,
+      (_, section, end) => end ? `第 ${section} 至 ${end} 條` : `第 ${section} 條`)
+    .replace(/條[–-]第/g, "條至第");
+}
+
 const clauseNotes = {
   bo: {
     0: ["BO §2、§38", "§2 係法例嘅字典。§38 係訂立 Regulations（規例）嘅權力來源之一。"],
@@ -32,7 +42,7 @@ const drawings = {
 function hero(course, route) {
   const picture = drawings[route];
   return `<section class="hero">
-    <div><p class="eyebrow">${course.eyebrow}</p><h1>${course.title}</h1><p>${course.intro}</p></div>
+    <div><p class="eyebrow">${boText(course.eyebrow)}</p><h1>${course.title}</h1><p>${boText(course.intro)}</p></div>
     ${picture ? `<svg class="hero-art" viewBox="0 0 205 190" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">${picture}</svg>` : ""}
   </section>`;
 }
@@ -43,7 +53,7 @@ function heading(title, hint = "") {
 
 function sources(keys, clause = null) {
   return `<div class="source-row">${keys.map(key =>
-    `<button type="button" class="source-chip" data-reference="${key}"${key === "bo" && clause ? ' data-clause="true"' : ""}>${key === "bo" && clause ? clause[0] : references[key][0]} ↗</button>`
+    `<button type="button" class="source-chip" data-reference="${key}"${key === "bo" && clause ? ' data-clause="true"' : ""}>${boText(key === "bo" && clause ? clause[0] : references[key][0])} ↗</button>`
   ).join("")}</div>`;
 }
 
@@ -51,10 +61,10 @@ function stepDetail(course, index) {
   const [label, title, explanation, principle, example, refs] = course.steps[index];
   const branch = current === "mbis" && index === 3 ? [5, 4] : current === "mwis" && index === 3 ? [4, 4] : null;
   return `<p class="eyebrow">${String(index + 1).padStart(2, "0")} / ${label}</p>
-    <h3>${title}</h3><p>${explanation}</p>
+    <h3>${boText(title)}</h3><p>${boText(explanation)}</p>
     <div class="detail-grid">
-      <div><div class="detail-label">點解要咁做？</div><p>${principle}</p></div>
-      <div><div class="detail-label">遇到呢個情況點做？</div><p>${example}</p></div>
+      <div><div class="detail-label">點解要咁做？</div><p>${boText(principle)}</p></div>
+      <div><div class="detail-label">遇到呢個情況點做？</div><p>${boText(example)}</p></div>
     </div>${branch ? `<div class="repair-branches" aria-label="修理同交表">
       <button type="button" class="source-chip" data-jump="${branch[0]}">唔使整 → 睇點交表</button>
       <button type="button" class="source-chip" data-jump="${branch[1]}">${current === "mbis" ? "要整 → 睇邊個跟" : "要整 → 睇邊個簽表"}</button>
@@ -64,26 +74,26 @@ function stepDetail(course, index) {
 function studyTable({ columns, rows, note, ref }) {
   return `<div class="table-wrap" tabindex="0" role="region" aria-label="${columns[0]}"><table>
     <thead><tr>${columns.map(column => `<th scope="col">${column}</th>`).join("")}</tr></thead>
-    <tbody>${rows.map(([label, ...cells], rowIndex) => `<tr><th scope="row">${label}</th>${columns.slice(1).map((_, columnIndex) => {
+    <tbody>${rows.map(([label, ...cells], rowIndex) => `<tr><th scope="row">${boText(label)}</th>${columns.slice(1).map((_, columnIndex) => {
       const cell = cells[columnIndex];
       if (Array.isArray(cell)) {
-        return `<td><div class="framework-highlights">${cell.map(clause => `<button type="button" class="source-chip" data-framework-clause="${clause}" aria-haspopup="dialog"><strong>${clause}</strong> ${boHighlights[clause][0]}</button>`).join("")}</div></td>`;
+        return `<td><div class="framework-highlights">${cell.map(clause => `<button type="button" class="source-chip" data-framework-clause="${clause}" aria-haspopup="dialog"><strong>${boText(clause)}</strong> ${boHighlights[clause][0]}</button>`).join("")}</div></td>`;
       }
       if (cell && typeof cell === "object") {
         const total = cell.groups.reduce((count, [, sections]) => count + sections.length, 0);
-        return `<td><p class="section-summary">${cell.summary}</p><button type="button" class="source-chip" data-framework-row="${rowIndex}" aria-haspopup="dialog">${cell.action ?? `睇 ${total} 條`}</button></td>`;
+        return `<td><p class="section-summary">${boText(cell.summary)}</p><button type="button" class="source-chip" data-framework-row="${rowIndex}" aria-haspopup="dialog">${cell.action ?? `睇 ${total} 條`}</button></td>`;
       }
-      return `<td>${cell ?? ""}</td>`;
+      return `<td>${boText(cell ?? "")}</td>`;
     }).join("")}</tr>`).join("")}</tbody>
   </table></div>${note ? `<p class="table-note">${note}</p>` : ""}${ref ? sources([ref]) : ""}`;
 }
 
 function practiceCard(item, index) {
   const [title, prompt, choices] = item;
-  return `<details class="case-card"><summary>${title}</summary><div>
-    <p>${prompt}</p>
+  return `<details class="case-card"><summary>${boText(title)}</summary><div>
+    <p>${boText(prompt)}</p>
     <div class="choice-set" role="group" aria-label="選擇答案">${choices.map((choice, choiceIndex) =>
-      `<button class="choice" type="button" aria-pressed="false" data-case="${index}" data-choice="${choiceIndex}">${choice}</button>`
+      `<button class="choice" type="button" aria-pressed="false" data-case="${index}" data-choice="${choiceIndex}">${boText(choice)}</button>`
     ).join("")}</div>
     <p class="feedback" role="status"></p>
     <div class="answer" hidden></div>
@@ -94,7 +104,7 @@ function renderBoFlowchart() {
   const node = (key) => {
     const [title, clauses] = boFlow[key];
     return `<button type="button" class="bo-flow-node" data-bo-flow="${key}" aria-haspopup="dialog">
-      <strong>${title}</strong><small>${clauses}</small>
+      <strong>${title}</strong><small>${boText(clauses)}</small>
     </button>`;
   };
   const arrow = '<span class="bo-flow-arrow" aria-hidden="true">↓</span>';
@@ -126,7 +136,7 @@ function renderBoFlowchart() {
 
 function renderCourse(course) {
   return `${hero(course, current)}
-    <div class="metrics">${course.metrics.map(([metric, label]) => `<div class="metric"><strong>${metric}</strong><span>${label}</span></div>`).join("")}</div>
+    <div class="metrics">${course.metrics.map(([metric, label]) => `<div class="metric"><strong>${boText(metric)}</strong><span>${boText(label)}</span></div>`).join("")}</div>
     ${course.framework ? `${renderBoFlowchart()}<section class="framework">${heading(course.framework.heading)}${studyTable(course.framework)}</section>` : ""}
     <section aria-label="流程圖">
       ${heading(current === "bo" ? "由睇例到落手做" : "由收到通知到做完", "撳每一步，睇邊個做、點解要做")}
@@ -139,7 +149,7 @@ function renderCourse(course) {
     </section>
     ${course.table ? `<section>${heading(course.table.heading)}${studyTable(course.table)}</section>` : ""}
     <section>${heading(course.extraTitle)}
-      <div class="accordion">${course.extras.map(([question, answer]) => `<details><summary>${question}</summary><p>${answer}</p></details>`).join("")}</div>
+      <div class="accordion">${course.extras.map(([question, answer]) => `<details><summary>${boText(question)}</summary><p>${boText(answer)}</p></details>`).join("")}</div>
     </section>
     <section>${heading("試答面試題", "揀答案之後睇面試同對市民點講")}
       ${course.cases.map(practiceCard).join("")}
@@ -202,16 +212,16 @@ function activateStep(index, focus = false) {
 }
 
 function showReferences(keys, clause = null) {
-  document.querySelector("#reference-title").textContent = clause?.[0] ?? "官方依據";
+  document.querySelector("#reference-title").textContent = boText(clause?.[0] ?? "官方依據");
   document.querySelector("#reference-content").innerHTML = keys.map(key => {
     const [title, context, url] = references[key];
-    return `<div class="reference-item"><h3>${title}</h3><p>${clause?.[1] ?? context}</p><a href="${url}" target="_blank" rel="noopener noreferrer">開啟官方來源 ↗</a></div>`;
+    return `<div class="reference-item"><h3>${boText(title)}</h3><p>${boText(clause?.[1] ?? context)}</p><a href="${url}" target="_blank" rel="noopener noreferrer">開啟官方來源 ↗</a></div>`;
   }).join("");
   dialog.showModal();
 }
 
 function showFrameworkDialog(title, content, ref = "bo") {
-  document.querySelector("#reference-title").textContent = title;
+  document.querySelector("#reference-title").textContent = boText(title);
   document.querySelector("#reference-content").innerHTML = content +
     `<div class="source-row"><a href="${references[ref][2]}" target="_blank" rel="noopener noreferrer">睇 Cap. 123 官方條文 ↗</a></div>`;
   dialog.showModal();
@@ -222,8 +232,8 @@ function showFrameworkSections(rowIndex) {
   const details = courses[current].framework.rows[rowIndex].at(-1);
   const content = details.groups.map(([group, sections]) =>
     `<section class="reference-item"><h3>${group}</h3><dl class="section-list">${sections.map(([section, meaning]) =>
-      `<dt>${section}</dt><dd>${meaning}</dd>`).join("")}</dl></section>`
-  ).join("") + (details.note ? `<p class="table-note">${details.note}</p>` : "");
+      `<dt>${boText(section)}</dt><dd>${boText(meaning)}</dd>`).join("")}</dl></section>`
+  ).join("") + (details.note ? `<p class="table-note">${boText(details.note)}</p>` : "");
   showFrameworkDialog(details.title, content, details.ref);
 }
 
@@ -234,7 +244,7 @@ page.addEventListener("click", event => {
     const [title, , clauses] = boFlow[button.dataset.boFlow];
     const breakdown = clauses.map(clause => {
       const [label, meaning = boFlowClauseNotes[clause]] = boFlowClauseLabels[clause] ?? boHighlights[clause];
-      return `<div><dt><span>${clause}</span> ${label}</dt><dd>${meaning}</dd></div>`;
+      return `<div><dt><span>${boText(clause)}</span> ${label}</dt><dd>${boText(meaning)}</dd></div>`;
     }).join("");
     showFrameworkDialog(title, `<dl class="bo-clause-breakdown">${breakdown}</dl>`);
     return;
@@ -243,7 +253,7 @@ page.addEventListener("click", event => {
     const clause = button.dataset.frameworkClause;
     const [label, meaning] = boHighlights[clause];
     const [part] = courses.bo.framework.rows.find(([, , clauses]) => clauses.includes(clause));
-    showFrameworkDialog(`${clause}｜${label}`, `<section class="reference-item"><p class="detail-label">${part}</p><p>${meaning}</p></section>`);
+    showFrameworkDialog(`${clause}｜${label}`, `<section class="reference-item"><p class="detail-label">${boText(part)}</p><p>${boText(meaning)}</p></section>`);
     return;
   }
   if (button.dataset.frameworkRow !== undefined) {
@@ -268,9 +278,9 @@ page.addEventListener("click", event => {
   for (const option of card.querySelectorAll(".choice")) option.setAttribute("aria-pressed", String(option === button));
   card.querySelector(".feedback").textContent = Number(button.dataset.choice) === correctIndex
     ? "答啱。"
-    : `正確做法係「${choices[correctIndex]}」。`;
+    : `正確做法係「${boText(choices[correctIndex])}」。`;
   const answer = card.querySelector(".answer");
-  answer.innerHTML = `<p><strong>BD 面試答法</strong>　${officer}</p><p><strong>對市民點講</strong>　${publicAnswer}</p>`;
+  answer.innerHTML = `<p><strong>BD 面試答法</strong>　${boText(officer)}</p><p><strong>對市民點講</strong>　${boText(publicAnswer)}</p>`;
   answer.hidden = false;
 });
 
