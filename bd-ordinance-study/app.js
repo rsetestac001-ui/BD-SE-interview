@@ -68,7 +68,7 @@ function studyTable({ columns, rows, note, ref }) {
       const cell = cells[columnIndex];
       if (cell && typeof cell === "object") {
         const total = cell.groups.reduce((count, [, sections]) => count + sections.length, 0);
-        return `<td><p class="section-summary">${cell.summary}</p><button type="button" class="source-chip" data-framework-row="${rowIndex}" aria-haspopup="dialog">睇 ${total} 條</button></td>`;
+        return `<td><p class="section-summary">${cell.summary}</p><button type="button" class="source-chip" data-framework-row="${rowIndex}" aria-haspopup="dialog">${cell.action ?? `睇 ${total} 條`}</button></td>`;
       }
       return `<td>${cell ?? ""}</td>`;
     }).join("")}</tr>`).join("")}</tbody>
@@ -179,8 +179,10 @@ function showFrameworkSections(rowIndex) {
   document.querySelector("#reference-content").innerHTML = details.groups.map(([group, sections]) =>
     `<section class="reference-item"><h3>${group}</h3><dl class="section-list">${sections.map(([section, meaning]) =>
       `<dt>${section}</dt><dd>${meaning}</dd>`).join("")}</dl></section>`
-  ).join("") + `<p class="table-note">${details.note}</p><div class="source-row"><a href="${references[details.ref][2]}" target="_blank" rel="noopener noreferrer">睇 Cap. 123 官方條文 ↗</a></div>`;
+  ).join("") + (details.note ? `<p class="table-note">${details.note}</p>` : "") +
+    `<div class="source-row"><a href="${references[details.ref ?? "bo"][2]}" target="_blank" rel="noopener noreferrer">睇 Cap. 123 官方條文 ↗</a></div>`;
   dialog.showModal();
+  dialog.scrollTop = 0;
 }
 
 page.addEventListener("click", event => {
