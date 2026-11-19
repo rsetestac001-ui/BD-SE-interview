@@ -706,15 +706,16 @@ function openProvisionFlow(keys, parent, trigger, clause) {
     const node = event.target.closest("[data-provision-flow-path]");
     if (!node) return;
     const path = node.dataset.provisionFlowPath;
-    if (parent.showProvisionPath(clause, path)) {
+    const targetClause = node.dataset.provisionFlowSection || clause;
+    if (parent.showProvisionPath(targetClause, path)) {
       chart.setOrigin(parent.captureOrigin(trigger));
       return;
     }
-    const sourceKey = `flow-source:${chart.dialog.id}:${clause}`;
+    const sourceKey = `flow-source:${chart.dialog.id}:${targetClause}`;
     const source = linkedReferenceWindows.get(sourceKey) ?? createLinkedReferenceWindow(sourceKey, chart);
-    if (!source.dialog.open) openProvision(clause, source);
+    if (!source.dialog.open) openProvision(targetClause, source);
     source.setOrigin(chart.captureOrigin(node));
-    source.showProvisionPath(clause, path);
+    source.showProvisionPath(targetClause, path);
   });
   show();
 }
@@ -736,8 +737,8 @@ function renderProvisionFlow(clause, keys) {
     ${groups.map(([heading, rows, connected = true]) => `<section class="provision-chart-group">
       <h3>${escapeText(heading)}</h3>
       <div class="provision-chart-rows${connected ? " is-connected" : ""}">
-      ${rows.map(row => `<div class="provision-chart-row">${row.map(([path, label, note]) => `<button type="button" class="provision-chart-node" data-provision-flow-path="${escapeText(path)}">
-        <span>${escapeText(path || boText(clause))}</span><strong>${escapeText(label)}</strong>${note ? `<small>${escapeText(note)}</small>` : ""}
+      ${rows.map(row => `<div class="provision-chart-row">${row.map(([path, label, note, section]) => `<button type="button" class="provision-chart-node" data-provision-flow-path="${escapeText(path)}"${section ? ` data-provision-flow-section="${escapeText(section)}"` : ""}>
+        <span>${escapeText(section ? boText(section + path) : path || boText(clause))}</span><strong>${escapeText(label)}</strong>${note ? `<small>${escapeText(note)}</small>` : ""}
       </button>`).join("")}</div>`).join("")}</div>
     </section>`).join("")}
   </div>`;
