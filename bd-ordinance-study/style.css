@@ -49,3 +49,8 @@ dialog{color:var(--ink);max-width:550px;width:calc(100% - 30px);max-height:min(7
 .bo-clause-breakdown dt{font-weight:750;line-height:1.45}
 .bo-clause-breakdown dt span{color:var(--green);margin-right:5px}
 .bo-clause-breakdown dd{margin:4px 0 0;line-height:1.6}
+.bo-flow-intro{max-width:740px;margin:0 auto 16px;color:var(--muted);font-size:14px}
+.bo-flow-intro p+p{margin-top:8px}
+.bo-flow-intro strong{color:var(--ink)}
+.bo-flow-clause-group+.bo-flow-clause-group{margin-top:16px}
+.bo-flow-clause-group h3{margin:0 0 7px;color:var(--green);font-size:14px}
