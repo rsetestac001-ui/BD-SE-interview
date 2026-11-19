@@ -164,7 +164,7 @@ function renderBoFlowchart() {
 function renderCourse(course) {
   return `${hero(course, current)}
     <div class="metrics">${course.metrics.map(([metric, label]) => `<div class="metric"><strong>${boText(metric)}</strong><span>${boText(label)}</span></div>`).join("")}</div>
-    ${course.framework ? `${renderBoFlowchart()}<section class="framework">${heading(course.framework.heading)}${studyTable(course.framework)}</section>` : ""}
+    ${course.framework ? `${renderBoFlowchart()}<section class="framework">${heading(course.framework.heading)}${studyTable(course.framework)}${renderProvisionIndex(course.framework)}</section>` : ""}
     <section aria-label="流程圖">
       ${heading(current === "bo" ? "由睇例到落手做" : "由收到通知到做完", "撳每一步，睇邊個做、點解要做")}
       <div class="flow" role="tablist" aria-label="流程步驟" style="--steps:${course.steps.length}">
@@ -298,10 +298,49 @@ dialog.addEventListener("keydown", event => {
 referenceContent.addEventListener("toggle", keepDialogInView, true);
 window.addEventListener("resize", keepDialogInView);
 
-function expandClause(clause) {
-  const notes = boDetailedClauses[clause];
-  return `<details class="clause-more"><summary aria-label="詳細解釋 ${boText(clause)}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
-    <dl>${notes.map(([label, meaning]) => `<div><dt>${boText(label)}</dt><dd>${boText(meaning)}</dd></div>`).join("")}</dl></details>`;
+function escapeText(value) {
+  const entities = { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" };
+  return value.replace(/[&<>"']/g, character => entities[character]);
+}
+
+function renderProvisionIndex(framework) {
+  const groups = new Map();
+  for (const [clause, provision] of Object.entries(boPlainProvisions)) {
+    const [part, title] = provision;
+    const group = clause.startsWith("Schedule") ? "附表" : part ? `Part ${part}` : "開頭條文";
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(`<li><button type="button" class="source-chip" data-bo-provision="${escapeText(clause)}" aria-haspopup="dialog"><strong>${boText(clause)}</strong> ${escapeText(title)}</button></li>`);
+  }
+  return `<details class="bo-provision-index"><summary>逐款查閱全部條文</summary>
+    ${Array.from(groups, ([group, buttons]) => {
+      const [label] = framework.rows.find(([name]) => name.split("（")[0] === group);
+      return `<details><summary>${boText(label)}</summary><ul>${buttons.join("")}</ul></details>`;
+    }).join("")}</details>`;
+}
+
+function expandClause(clause, open = false) {
+  const root = clause.match(/^§\d+[A-Z]*/)?.[0] ?? clause;
+  const [, , , anchor, notes] = boPlainProvisions[root];
+  const selected = clause.slice(root.length);
+  const range = selected.match(/^\((\d+)\)[–-]\((\d+)\)$/);
+  const prefixes = range
+    ? Array.from({ length: Number(range[2]) - Number(range[1]) + 1 }, (_, i) => `(${Number(range[1]) + i})`)
+    : selected.split("、").map(value => value.replace(/^§\d+[A-Z]*/, ""));
+  const include = label => !selected || prefixes.some(prefix => label.startsWith(prefix));
+  const details = root === "§21"
+    ? boSection21Explanations
+    : notes.filter(([label]) => include(label)).map(([label, text]) => {
+      const [number, ...name] = label.split("｜");
+      const heading = number.startsWith("(") && /^\([\dA-Za-z]+\)(?:\([\dA-Za-z]+\))*$/.test(number)
+        ? boText(root + number)
+        : [boText(root), number].filter(Boolean).join(" ");
+      return [[heading, ...name].join("｜"), text];
+    });
+  const source = `${references.bo[2]}?xpid=${encodeURIComponent(anchor)}`;
+  const mode = root === "§21" ? "逐款白話解釋" : "逐款讀本 · 由中文原文轉成較口語嘅寫法，可對照官方原文";
+  return `<details class="clause-more"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
+    <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
+    <dl>${details.map(([label, meaning]) => `<div><dt>${escapeText(boText(label))}</dt><dd>${escapeText(boText(meaning))}</dd></div>`).join("")}</dl></details>`;
 }
 
 function renderFlowClauses(clauses) {
@@ -326,6 +365,13 @@ function showFrameworkSections(rowIndex) {
 page.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
+  if (button.dataset.boProvision) {
+    const clause = button.dataset.boProvision;
+    const [, title, english] = boPlainProvisions[clause];
+    const heading = [clause, title].filter(Boolean).join("｜");
+    showFrameworkDialog(heading, `${english ? `<p class="bo-provision-source">${escapeText(english)}</p>` : ""}${expandClause(clause, true)}`);
+    return;
+  }
   if (button.dataset.boFlow) {
     const [title, clauses] = boFlow[button.dataset.boFlow];
     showFrameworkDialog(title, renderFlowClauses(clauses));
