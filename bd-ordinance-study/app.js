@@ -318,6 +318,45 @@ function renderProvisionIndex(framework) {
     }).join("")}</details>`;
 }
 
+function renderProvisionTree(entries) {
+  const root = { items: [], children: new Map() };
+  for (const { label, title, text } of entries) {
+    const [number, qualifier = ""] = label.split("｜");
+    const [prefix] = number.match(/^(?:\([\dA-Za-z]+\))*/);
+    const tail = number.slice(prefix.length).trim();
+    const path = prefix.match(/\([\dA-Za-z]+\)/g) ?? [];
+    let description = title || qualifier;
+    if (/^-\([\dA-Za-z]+\)$/.test(tail)) {
+      path[path.length - 1] += ` 至 ${tail.slice(1)}`;
+    } else {
+      const group = tail || (["續文", "但書"].includes(qualifier) ? "" : qualifier);
+      if (group) {
+        const markers = group.match(/(?:\([\dA-Za-z]+\))+$/)?.[0] ?? "";
+        path.push(group.slice(0, group.length - markers.length).trim(), ...(markers.match(/\([\dA-Za-z]+\)/g) ?? []));
+        if (!tail) description = title;
+      }
+    }
+    let node = root;
+    for (const number of path) {
+      if (!node.children.has(number)) {
+        const child = { number, items: [], children: new Map() };
+        node.children.set(number, child);
+        node.items.push(child);
+      }
+      node = node.children.get(number);
+    }
+    node.items.push({ text, description });
+  }
+  const renderItems = (items, depth) => items.map(item => {
+    if (!item.items) {
+      return `<li class="provision-copy">${item.description ? `<strong>${escapeText(boText(item.description))}</strong>` : ""}<p>${escapeText(boText(item.text))}</p></li>`;
+    }
+    const label = depth === 0 && item.number.startsWith("(") ? `第 ${item.number} 款` : item.number;
+    return `<li class="provision-branch"><div class="provision-number">${escapeText(label)}</div><ol role="list">${renderItems(item.items, depth + 1)}</ol></li>`;
+  }).join("");
+  return `<ol class="provision-tree" role="list">${renderItems(root.items, 0)}</ol>`;
+}
+
 function expandClause(clause, open = false) {
   const root = clause.match(/^§\d+[A-Z]*/)?.[0] ?? clause;
   const [, , , anchor, notes] = boPlainProvisions[root];
@@ -328,19 +367,16 @@ function expandClause(clause, open = false) {
     : selected.split("、").map(value => value.replace(/^§\d+[A-Z]*/, ""));
   const include = label => !selected || prefixes.some(prefix => label.startsWith(prefix));
   const details = root === "§21"
-    ? boSection21Explanations
-    : notes.filter(([label]) => include(label)).map(([label, text]) => {
-      const [number, ...name] = label.split("｜");
-      const heading = number.startsWith("(") && /^\([\dA-Za-z]+\)(?:\([\dA-Za-z]+\))*$/.test(number)
-        ? boText(root + number)
-        : [boText(root), number].filter(Boolean).join(" ");
-      return [[heading, ...name].join("｜"), text];
-    });
+    ? boSection21Explanations.map(([heading, text]) => {
+      const [label, title] = heading.slice(root.length).split("｜");
+      return { label: title === "續文" ? `${label}｜續文` : label, title, text };
+    })
+    : notes.map(([label, text]) => ({ label, text }));
   const source = `${references.bo[2]}?xpid=${encodeURIComponent(anchor)}`;
   const mode = root === "§21" ? "逐款白話解釋" : "逐款讀本 · 由中文原文轉成較口語嘅寫法，可對照官方原文";
   return `<details class="clause-more"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
     <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
-    <dl>${details.map(([label, meaning]) => `<div><dt>${escapeText(boText(label))}</dt><dd>${escapeText(boText(meaning))}</dd></div>`).join("")}</dl></details>`;
+    ${renderProvisionTree(details.filter(({ label }) => include(label)))}</details>`;
 }
 
 function renderFlowClauses(clauses) {
