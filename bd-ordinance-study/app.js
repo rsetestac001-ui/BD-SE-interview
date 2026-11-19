@@ -75,10 +75,12 @@ function stepDetail(course, index) {
     </div>` : ""}${sources(refs, clauseNotes[current]?.[index])}`;
 }
 
-function studyTable({ columns, rows, note, ref }) {
+function studyTable({ columns, rows, note, ref, rowRanges }) {
   return `<div class="table-wrap" tabindex="0" role="region" aria-label="${columns[0]}"><table>
     <thead><tr>${columns.map(column => `<th scope="col">${column}</th>`).join("")}</tr></thead>
-    <tbody>${rows.map(([label, ...cells], rowIndex) => `<tr><th scope="row">${boText(label)}</th>${columns.slice(1).map((_, columnIndex) => {
+    <tbody>${rows.map(([label, ...cells], rowIndex) => {
+      const range = rowRanges?.[label.split("（")[0]];
+      return `<tr><th scope="row">${boText(label)}${range ? `<span class="section-range">${range}</span>` : ""}</th>${columns.slice(1).map((_, columnIndex) => {
       const cell = cells[columnIndex];
       if (Array.isArray(cell)) {
         return `<td><div class="framework-highlights">${cell.map(clause => `<button type="button" class="source-chip" data-framework-clause="${clause}" aria-haspopup="dialog"><strong>${boText(clause)}</strong> ${boHighlights[clause][0]}</button>`).join("")}</div></td>`;
@@ -88,7 +90,8 @@ function studyTable({ columns, rows, note, ref }) {
         return `<td><p class="section-summary">${boText(cell.summary)}</p><button type="button" class="source-chip" data-framework-row="${rowIndex}" aria-haspopup="dialog">${cell.action ?? `睇 ${total} 條`}</button></td>`;
       }
       return `<td>${boText(cell ?? "")}</td>`;
-    }).join("")}</tr>`).join("")}</tbody>
+    }).join("")}</tr>`;
+    }).join("")}</tbody>
   </table></div>${note ? `<p class="table-note">${note}</p>` : ""}${ref ? sources([ref]) : ""}`;
 }
 
