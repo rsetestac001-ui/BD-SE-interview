@@ -140,7 +140,7 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   gap: 8px;
   margin-bottom: 5px;
 }
-.provision-caption > .provision-number {
+.provision-tree > .provision-branch > .provision-caption > .provision-number {
   width: fit-content;
   padding: 2px 8px;
   border-radius: 5px;
@@ -389,3 +389,29 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   outline: 2px solid #517eac;
   outline-offset: 2px;
 }
+
+.provision-section-actions, .provision-caption {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.principle-button {
+  min-height: 36px;
+  padding: 3px 9px;
+  border: 1px solid #b8cfe8;
+  border-radius: 7px;
+  background: #e7f0fb;
+  color: #214572;
+  font-size: .85rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.principle-button:hover { background: #d9e8fa; }
+.principle-button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.provision-principle p {
+  margin: 0 0 9px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.provision-principle .principle-context { color: var(--muted); font-size: .85rem; }
