@@ -348,7 +348,7 @@ function createReferenceWindow(dialog) {
       moveDialog(useRight ? parent.right + 12 : parent.left - childWidth - 12, parent.top);
     } else {
       dialog.style.width = "min(550px, calc(100% - 36px))";
-      dialog.style.maxHeight = "min(65dvh, 620px)";
+      dialog.style.maxHeight = "var(--nested-dialog-max-height, min(65dvh, 620px))";
       moveDialog(parent.left + 18, parent.top + 58);
     }
   }
@@ -393,6 +393,7 @@ function createReferenceWindow(dialog) {
 
   function setOrigin(next) {
     origin = next;
+    dialog.classList.toggle("has-reference-connection", Boolean(origin?.explanation));
     referenceOrigin.hidden = !origin;
     referenceOrigin.replaceChildren();
     if (!origin) return;
@@ -407,14 +408,29 @@ function createReferenceWindow(dialog) {
       quote.textContent = origin.sentence;
       referenceOrigin.append(quote);
     }
+    if (origin.explanation) {
+      const context = document.createElement("section");
+      context.className = "reference-connection";
+      const heading = document.createElement("h3");
+      heading.textContent = "點解引用呢條？";
+      context.append(heading);
+      for (const text of origin.explanation.split("\n")) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = text;
+        context.append(paragraph);
+      }
+      referenceOrigin.append(context);
+    }
     keepDialogInView();
   }
 
   function captureOrigin(trigger, includeSentence = true) {
-    const section = trigger.closest("[data-quiz-provision]")?.dataset.quizProvision ??
+    const section = trigger.dataset.referenceSourceSection ?? trigger.closest("[data-quiz-provision]")?.dataset.quizProvision ??
       trigger.closest(".occupation-guide")?.nextElementSibling?.dataset.quizProvision;
     const paragraph = trigger.closest("p, li, h4, strong");
     let sentence = "";
+    let lead = "";
+    let rest = "";
     if (paragraph && includeSentence) {
       const before = document.createRange();
       before.selectNodeContents(paragraph);
@@ -423,14 +439,14 @@ function createReferenceWindow(dialog) {
       after.selectNodeContents(paragraph);
       after.setStartAfter(trigger);
       const trim = text => text.replace(/\s+/g, " ").trim();
-      const lead = trim(before.toString()).split(/[。！？]/).at(-1);
-      const rest = trim(after.toString()).split(/(?<=[。！？])/)[0];
+      lead = trim(before.toString()).split(/[。！？；]/).at(-1).trim();
+      rest = trim(after.toString()).split(/(?<=[。！？；])/)[0].trim();
       sentence = `「${lead.length > 40 ? "…" + lead.slice(-40) : lead}${trigger.textContent}${rest.length > 45 ? rest.slice(0, 45) + "…" : rest}」`;
     }
-    const path = trigger.closest("[data-provision-path]")?.dataset.provisionPath;
+    const path = trigger.dataset.referenceSourcePath ?? trigger.closest("[data-provision-path]")?.dataset.provisionPath ?? "";
     return { controller, trigger, scrollTop: referenceContent.scrollTop,
       label: section ? boText(section + (path && /^(?:\([\dA-Za-z]+\))+$/.test(path) ? path : "")) : referenceTitle.textContent,
-      sentence };
+      section, path, sentence, lead, rest };
   }
 
   function restoreOrigin({ trigger, scrollTop }) {
@@ -648,8 +664,8 @@ function showReferenceSources(keys, clause = null) {
   return openReferenceWindow(key, (window, anchor) => window.showReferences(keys, clause, anchor));
 }
 
-function openProvision(clause, parent, subsection = "") {
-  const linked = parent && (subsection || referenceWindows.get(clause) === parent);
+function openProvision(clause, parent, subsection = "", fromReference = false) {
+  const linked = parent && (fromReference || subsection || referenceWindows.get(clause) === parent);
   const key = linked ? `linked:${parent.dialog.id}:${clause}${subsection}` : clause;
   return openReferenceWindow(key, (window, anchor) => {
     const [, title, english] = boPlainProvisions[clause];
@@ -662,7 +678,10 @@ function openLinkedProvision(reference, parent, trigger) {
   const [clause] = reference.match(/^§[0-9]+[A-Z]*|^Schedule [0-9]+/);
   const subsection = reference.slice(clause.length).match(/^(?:\([\dA-Za-z]+\))+/)?.[0];
   const origin = parent.captureOrigin(trigger);
-  const referenceWindow = openProvision(clause, parent, subsection);
+  if (trigger.hasAttribute("data-reference-clause")) {
+    origin.explanation = explainBoReference(origin, reference, clause, subsection);
+  }
+  const referenceWindow = openProvision(clause, parent, subsection, Boolean(origin.explanation));
   if (referenceWindow !== parent) referenceWindow.setOrigin(origin);
   if (subsection) referenceWindow.jumpToSubsection(subsection);
 }
@@ -780,8 +799,46 @@ function renderProvisionIndex(framework) {
 
 const provisionEmphasis = /(?<reference>第\s*\d+[A-Z]*(?:\s*\([\dA-Za-z]+\))*\s*條|附表\s*\d+)|(?<local>第\s*(?:\([\dA-Za-z]+\)\s*)+(?:(?:、|及|或|至|與|和)\s*(?:\([\dA-Za-z]+\)\s*)+)*[款段節])|(?<term>\b[A-Z][A-Za-z]+(?:[ -]+[A-Za-z]+){0,8}\s*（[^（）\n]{1,24}）|\b[A-Z]{2,5}\s*（[^（）\n]{1,24}）)|(?<time>(?:\d+(?:\.\d+)?|[一二兩三四五六七八九十百]+)\s*(?:(?:個\s*)?月|日|年|星期|小時)(?:\s*(?:之?內|屆滿|期滿|前|後))?(?![\d年月日]))|(?<rule>唔可以|唔准|唔需要|不得|不准|毋須|無須|無需|必須|要先|須先|須在|須於|須由|須向|須按|須以|須將|要喺|要由|要向|要按|除非|除外|但書|例外)/gu;
 
-function renderReferenceButton(clause, label) {
-  return `<button type="button" class="reference-cross" aria-haspopup="dialog" data-reference-clause="${escapeText(clause)}">${escapeText(label)}</button>`;
+function explainBoReference({ section, path, lead, rest }, reference, targetSection, targetPath) {
+  const note = boReferenceNotes[(section ?? "") + path]?.[reference];
+  if (note) return note;
+
+  const [, title] = boPlainProvisions[targetSection];
+  const headings = boProvisionHeadings[targetSection];
+  const targetTopic = (targetPath ? headings?.[targetPath] : headings) || title;
+  const topic = `「${typeof targetTopic === "string" ? targetTopic : title}」`;
+  const label = boText(reference);
+  const phrase = lead.split(/[，、﹔：]/).at(-1).trim();
+  const following = rest.split(/[，；。]/)[0];
+  if (/^(?:另有規定|嘅緊急例外|規定嘅例外|有(?:緊急)?例外)/.test(following) ||
+      /(?:除|但須受|但受制於|受制於|受限於)$/.test(phrase)) {
+    return `原句叫你先睇${label}有冇例外或者限制。嗰邊講${topic}，會影響呢句嘅一般做法喺咩情況適用。`;
+  }
+  if (/(?:喺|在)?(?:唔影響|不影響|唔限制|不限制)(?:下列|以下)?$/.test(phrase)) {
+    return `${label}講${topic}。原句特登保留嗰邊嘅效力，所以要一齊睇兩邊規定。`;
+  }
+  if (/^(?:就唔適用|唔適用|不適用)/.test(following) || /^(?:嘅|的).{1,28}(?:唔適用|不適用)/.test(following)) {
+    return `${label}講${topic}。引用佢係為咗指出原句講嘅情況，可以唔跟嗰項規定。`;
+  }
+  if (/^(?:所講|所指|所列|提述|所述|定義|嘅意思)/.test(following)) {
+    return `呢度用${label}去界定原句所講嘅人、事或者要求。對照下面${topic}，就可以查清楚實際指邊樣。`;
+  }
+  if (/^(?:規定|要求)/.test(following) || /(?:須符合|要符合|受限於|符合)$/.test(phrase)) {
+    return `呢句要用到${label}入面關於${topic}嘅要求。下面嗰款交代實際要符合嘅條件或者要做嘅步驟。`;
+  }
+  if (/(?:按|根據|依據|依照|按照|遵照)$/.test(phrase) || /^(?:下|之下)(?:嘅|的)/.test(following)) {
+    return `原句用${label}做依據。${label}講${topic}，下面可以對照原句提到嘅步驟係按邊項權力、要求或者程序做。`;
+  }
+  if (reference.startsWith("Schedule") && /(?:表格|手令|範圍|地區|清單|所列)/.test(lead + rest)) {
+    return `原句引用附表，係為咗指明要用嘅格式或者要查嘅清單。呢個附表講${topic}，細節可以喺下文查到。`;
+  }
+  return `原句將${topic}呢個部分指去${label}。下面會帶你去睇引用嘅規定，方便同上面嗰句對照。`;
+}
+
+function renderReferenceButton(clause, label, section, path) {
+  const source = section ? ` data-reference-source-section="${escapeText(section)}"` : "";
+  const pinpoint = path ? ` data-reference-source-path="${escapeText(path)}"` : "";
+  return `<button type="button" class="reference-cross" aria-haspopup="dialog" data-reference-clause="${escapeText(clause)}"${source}${pinpoint}>${escapeText(label)}</button>`;
 }
 
 function isBuildingsOrdinanceReference(prefix) {
@@ -795,12 +852,12 @@ function isBuildingsOrdinanceReference(prefix) {
       last[1] ? last[1] !== "建築物條例" : !/^(?:本條例|呢條例|本例)$/.test(last[0]));
 }
 
-function renderInlineReference(label) {
+function renderInlineReference(label, section, path) {
   const reference = label.startsWith("第")
     ? "§" + label.replace(/[第條\s]/g, "")
     : "Schedule " + label.replace(/[^0-9]/g, "");
   const root = reference.split("(")[0];
-  return Object.hasOwn(boPlainProvisions, root) ? renderReferenceButton(reference, label) : escapeText(label);
+  return Object.hasOwn(boPlainProvisions, root) ? renderReferenceButton(reference, label, section, path) : escapeText(label);
 }
 
 function renderLocalReference(label, clause, currentPath) {
@@ -824,7 +881,7 @@ function renderLocalReference(label, clause, currentPath) {
     const text = label.slice(start, end);
     html += escapeText(label.slice(offset, start));
     if (entries.some(([number]) => number.startsWith(target))) {
-      html += renderReferenceButton(clause + target, text);
+      html += renderReferenceButton(clause + target, text, clause, currentPath);
       parentPath = target;
     } else {
       html += escapeText(text);
@@ -845,7 +902,7 @@ function renderProvisionText(text, clause, path) {
       const prefix = value.slice(0, match.index);
       if (!isBuildingsOrdinanceReference(prefix)) html += escapeText(match[0]);
       else if (match.groups.local) html += renderLocalReference(match[0], clause, path);
-      else html += renderInlineReference(match[0]);
+      else html += renderInlineReference(match[0], clause, path);
     } else {
       html += `<mark class="provision-mark provision-mark--${kind}">${escapeText(match[0])}</mark>`;
     }
