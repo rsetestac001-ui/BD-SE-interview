@@ -936,7 +936,7 @@ function openProvisionPrinciple(trigger, parent) {
     : notes?.[applicable] ?? boSectionPrinciples[section];
   const provisionLabel = describePrincipleTarget(section, path);
   const context = path && applicable !== path && !inactive
-    ? `<p class="principle-context">${escapeText(describePrincipleTarget(section, applicable))}嘅整體原理</p>`
+    ? `<p class="principle-context">${escapeText(describePrincipleTarget(section, applicable))}嘅整體原理。你撳嗰款暫時未有獨立解說。</p>`
     : "";
   const source = `${references.bo[2]}?xpid=${encodeURIComponent(anchor)}`;
   const body = `<div class="reference-item provision-principle">${context}
