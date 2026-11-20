@@ -693,8 +693,12 @@ function openProvisionFlow(keys, parent, trigger, clause) {
 
   const origin = parent.captureOrigin(trigger);
   const chart = createReferenceWindowFor(key);
+  const roleSections = ["§3", "§5", "§5A", "§7", "§8", "§8B", "§11", "§11A", "§13"];
+  const options = keys.some(key => roleSections.includes(key)) ? ["part-one-roles", ...keys] : keys;
+  if (["§7", "§8B", "§13"].every(key => keys.includes(key))) clause = "part-one-roles";
   const show = () => {
-    chart.showFrameworkDialog(`${clause}｜條文流程圖`, renderProvisionFlow(clause, keys), "bo", parent);
+    const title = clause === "part-one-roles" ? "第 1 部｜邊個負責咩？" : `${clause}｜條文流程圖`;
+    chart.showFrameworkDialog(title, renderProvisionFlow(clause, options), "bo", parent);
     chart.setOrigin(origin);
     chart.focus();
   };
@@ -709,6 +713,10 @@ function openProvisionFlow(keys, parent, trigger, clause) {
     if (!node) return;
     const path = node.dataset.provisionFlowPath;
     const targetClause = node.dataset.provisionFlowSection || clause;
+    if (clause === "part-one-roles") {
+      openLinkedProvision(targetClause + path, chart, node);
+      return;
+    }
     if (parent.showProvisionPath(targetClause, path)) {
       chart.setOrigin(parent.captureOrigin(trigger));
       return;
@@ -720,18 +728,20 @@ function openProvisionFlow(keys, parent, trigger, clause) {
   show();
 }
 
-function renderProvisionFlow(clause, keys) {
-  const title = boPlainProvisions[clause][1];
+function renderProvisionFlow(clause, options) {
+  const title = boPlainProvisions[clause]?.[1];
   const fallback = boProvisionHeadings[clause];
-  const [intro, groups] = boProvisionFlows[clause] ?? [
+  const flow = clause === "part-one-roles" ? boPartOneRoles : boProvisionFlows[clause];
+  const [intro, groups] = flow ?? [
     "呢張圖按款號幫你搵內容。撳一格就可以睇嗰款。",
     [["款項對照", typeof fallback === "object"
       ? Object.entries(fallback).map(([path, heading]) => [[path.replace("-", " 至 "), heading]])
       : [[["", fallback || title]]], false]]
   ];
-  const picker = keys.length > 1 ? `<label class="quiz-picker">揀條文 <select data-provision-flow-select>${keys.map(key =>
-    `<option value="${escapeText(key)}"${key === clause ? " selected" : ""}>${escapeText(boText(key))}｜${escapeText(boPlainProvisions[key][1])}</option>`
-  ).join("")}</select></label>` : "";
+  const picker = options.length > 1 ? `<label class="quiz-picker">揀流程圖 <select data-provision-flow-select>${options.map(key => {
+    const label = key === "part-one-roles" ? "第 1 部｜邊個負責咩？" : `${boText(key)}｜${boPlainProvisions[key][1]}`;
+    return `<option value="${escapeText(key)}"${key === clause ? " selected" : ""}>${escapeText(label)}</option>`;
+  }).join("")}</select></label>` : "";
   return `<div class="provision-chart">
     ${picker}<p class="provision-chart-intro">${escapeText(intro)}</p>
     ${groups.map(([heading, rows, connected = true]) => `<section class="provision-chart-group">
