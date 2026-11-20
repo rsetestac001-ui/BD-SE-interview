@@ -410,12 +410,12 @@ function createReferenceWindow(dialog) {
     keepDialogInView();
   }
 
-  function captureOrigin(trigger) {
+  function captureOrigin(trigger, includeSentence = true) {
     const section = trigger.closest("[data-quiz-provision]")?.dataset.quizProvision ??
       trigger.closest(".occupation-guide")?.nextElementSibling?.dataset.quizProvision;
     const paragraph = trigger.closest("p, li, h4, strong");
     let sentence = "";
-    if (paragraph) {
+    if (paragraph && includeSentence) {
       const before = document.createRange();
       before.selectNodeContents(paragraph);
       before.setEndBefore(trigger);
@@ -603,6 +603,11 @@ function createReferenceWindow(dialog) {
   });
 
   referenceContent.addEventListener("click", event => {
+    const principle = event.target.closest("[data-principle-section]");
+    if (principle) {
+      openProvisionPrinciple(principle, controller);
+      return;
+    }
     const cross = event.target.closest("[data-reference-clause]");
     if (cross) {
       openLinkedProvision(cross.dataset.referenceClause, controller, cross);
@@ -849,6 +854,51 @@ function renderProvisionText(text, clause, path) {
   return html + escapeText(value.slice(offset));
 }
 
+function renderPrincipleButton(section, path = "") {
+  return `<button type="button" class="principle-button" aria-haspopup="dialog" data-principle-section="${escapeText(section)}" data-principle-path="${escapeText(path)}">背後原理</button>`;
+}
+
+function describePrincipleTarget(section, path) {
+  const article = section.replace(/^§(.+)$/, "第 $1 條").replace(/^Schedule (\d+)$/, "附表 $1");
+  return [article, path].filter(Boolean).join(" ");
+}
+
+function openProvisionPrinciple(trigger, parent) {
+  const { principleSection: section, principlePath: path } = trigger.dataset;
+  const [, title, , anchor, entries] = boPlainProvisions[section];
+  const notes = boClausePrinciples[section];
+  const inactive = /^已廢除|^因時效已過而略去/.test(title) ||
+    Boolean(path && entries.find(([label, text]) => label === path && text === "原文註明呢個編號已廢除或略去。"));
+  let applicable = path;
+  while (applicable && !notes?.[applicable]) {
+    applicable = applicable.slice(0, Math.max(0, applicable.lastIndexOf("(")));
+  }
+
+  const explanation = inactive
+    ? "呢個編號留喺目錄方便對照舊文件。遇到引用呢個編號嘅舊個案，要按當時生效嘅版本理解。"
+    : notes?.[applicable] ?? boSectionPrinciples[section];
+  const provisionLabel = describePrincipleTarget(section, path);
+  const context = path && applicable !== path && !inactive
+    ? `<p class="principle-context">${escapeText(describePrincipleTarget(section, applicable))}嘅整體原理</p>`
+    : "";
+  const source = `${references.bo[2]}?xpid=${encodeURIComponent(anchor)}`;
+  const body = `<div class="reference-item provision-principle">${context}
+    ${explanation.split("\n").map(paragraph => `<p>${renderProvisionText(paragraph, section, applicable)}</p>`).join("")}
+    <a href="${source}" target="_blank" rel="noopener noreferrer">睇 ${escapeText(describePrincipleTarget(section, ""))}官方原文 ↗</a>
+  </div>`;
+  const origin = parent?.captureOrigin(trigger, false);
+  if (origin) origin.label = provisionLabel;
+  const key = `principle:${parent?.dialog.id ?? "page"}:${section}:${path}`;
+  openReferenceWindow(key, (window, anchorWindow) => {
+    window.showFrameworkDialog(`${provisionLabel}｜背後原理`, body, null, anchorWindow);
+    window.setOrigin(origin);
+    window.dialog.addEventListener("keydown", event => {
+      if (event.key === "Escape") window.dialog.close();
+    });
+    if (!origin) window.dialog.addEventListener("close", () => trigger.focus({ preventScroll: true }), { once: true });
+  }, parent);
+}
+
 function renderProvisionTree(entries, headings, section) {
   const root = { items: [], children: new Map() };
   for (const { label, title, text } of entries) {
@@ -889,7 +939,7 @@ function renderProvisionTree(entries, headings, section) {
     const heading = isSubsection ? headings?.[item.number.replace(" 至 ", "-")] : "";
     const path = parentPath + item.number;
     const number = `<div class="provision-number">${escapeText(label)}</div>`;
-    const caption = isSubsection ? `<div class="provision-caption">${number}${renderFavoriteButton(section, path)}</div>` : number;
+    const caption = `<div class="provision-caption">${number}${isSubsection ? renderFavoriteButton(section, path) : ""}${renderPrincipleButton(section, path)}</div>`;
     return `<li class="provision-branch" data-provision-path="${escapeText(path)}">${caption}${heading ? renderProvisionHeading(heading) : ""}<ol role="list">${renderItems(item.items, depth + 1, path)}</ol></li>`;
   }).join("");
   const introduction = typeof headings === "string"
@@ -956,7 +1006,10 @@ function expandClause(clause, open = false) {
   const source = `${references.bo[2]}?xpid=${encodeURIComponent(anchor)}`;
   const mode = root === "§21" ? "逐款白話解釋" : "逐款易讀版";
   return `${clause === "§21" ? renderOccupationGuide() : ""}<details class="clause-more" data-quiz-provision="${escapeText(root)}"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
-    <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
+    <div class="provision-section-actions">
+      <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
+      ${renderPrincipleButton(root)}
+    </div>
     <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">專業詞</li></ul>
     ${renderProvisionTree(details, headings, root)}</details>`;
 }
@@ -1027,6 +1080,10 @@ window.addEventListener("storage", event => {
 page.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
+  if (button.dataset.principleSection) {
+    openProvisionPrinciple(button);
+    return;
+  }
   if (button.dataset.favoriteOpen) {
     const entry = favorites.get(button.dataset.favoriteOpen);
     if (!entry) return;
