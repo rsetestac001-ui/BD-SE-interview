@@ -415,3 +415,30 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   overflow-wrap: anywhere;
 }
 .provision-principle .principle-context { color: var(--muted); font-size: .85rem; }
+
+.reference-connection {
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid #c4d6e9;
+}
+.reference-connection h3 {
+  margin: 0;
+  color: #214572;
+  font-size: .85rem;
+}
+.reference-origin .reference-connection p {
+  color: var(--ink);
+  font-size: .85rem;
+  line-height: 1.45;
+}
+
+dialog.has-reference-connection { --nested-dialog-max-height: min(82dvh, 680px); }
+.has-reference-connection .dialog-title {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+.has-reference-connection .reference-origin {
+  max-height: min(32dvh, 235px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
