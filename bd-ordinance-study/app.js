@@ -550,7 +550,7 @@ function createReferenceWindow(dialog) {
         return `<button type="button" data-quiz-option="${i}"${complete ? " disabled" : ""}${status ? ` class="${status}"` : ""}>${display(option)}${status ? `<small>${status === "right" ? "正確答案" : "你揀咗呢項"}</small>` : ""}</button>`;
       }).join("")}</div>
       ${complete ? `<div class="quiz-result" role="status" tabindex="-1" data-quiz-feedback><strong>${quizState.options[selected] === answer ? "答啱" : "答錯咗"}</strong>
-      <p>${renderProvisionText(explanation)}</p><a href="${source}" target="_blank" rel="noopener noreferrer">對照 ${display(key)}${pinpoint ? ` ${display(pinpoint)}` : ""}原文 ↗</a></div>
+      <p>${renderProvisionText(explanation, key, pinpoint)}</p><a href="${source}" target="_blank" rel="noopener noreferrer">對照 ${display(key)}${pinpoint ? ` ${display(pinpoint)}` : ""}原文 ↗</a></div>
       <button type="button" class="source-chip" data-quiz-action="next">${index + 1 === questions.length ? "睇結果" : "下一題"}</button>` : ""}`;
   }
 
@@ -643,10 +643,12 @@ function showReferenceSources(keys, clause = null) {
   return openReferenceWindow(key, (window, anchor) => window.showReferences(keys, clause, anchor));
 }
 
-function openProvision(clause, parent) {
-  return openReferenceWindow(clause, (window, anchor) => {
+function openProvision(clause, parent, subsection = "") {
+  const linked = parent && (subsection || referenceWindows.get(clause) === parent);
+  const key = linked ? `linked:${parent.dialog.id}:${clause}${subsection}` : clause;
+  return openReferenceWindow(key, (window, anchor) => {
     const [, title, english] = boPlainProvisions[clause];
-    const heading = [clause, title].filter(Boolean).join("｜");
+    const heading = [clause + subsection, title].filter(Boolean).join("｜");
     window.showFrameworkDialog(heading, `${english ? `<p class="bo-provision-source">${escapeText(english)}</p>` : ""}${expandClause(clause, true)}`, "bo", anchor);
   }, parent);
 }
@@ -655,7 +657,7 @@ function openLinkedProvision(reference, parent, trigger) {
   const [clause] = reference.match(/^§[0-9]+[A-Z]*|^Schedule [0-9]+/);
   const subsection = reference.slice(clause.length).match(/^(?:\([\dA-Za-z]+\))+/)?.[0];
   const origin = parent.captureOrigin(trigger);
-  const referenceWindow = openProvision(clause, parent);
+  const referenceWindow = openProvision(clause, parent, subsection);
   if (referenceWindow !== parent) referenceWindow.setOrigin(origin);
   if (subsection) referenceWindow.jumpToSubsection(subsection);
 }
@@ -761,21 +763,24 @@ function renderProvisionIndex(framework) {
     }).join("")}</details>`;
 }
 
-const provisionEmphasis = /(?<reference>第\s*\d+[A-Z]*(?:\s*\([\dA-Za-z]+\))*\s*條|附表\s*\d+)|(?<term>\b[A-Z][A-Za-z]+(?:[ -]+[A-Za-z]+){0,8}\s*（[^（）\n]{1,24}）|\b[A-Z]{2,5}\s*（[^（）\n]{1,24}）)|(?<time>(?:\d+(?:\.\d+)?|[一二兩三四五六七八九十百]+)\s*(?:(?:個\s*)?月|日|年|星期|小時)(?:\s*(?:之?內|屆滿|期滿|前|後))?(?![\d年月日]))|(?<rule>唔可以|唔准|唔需要|不得|不准|毋須|無須|無需|必須|要先|須先|須在|須於|須由|須向|須按|須以|須將|要喺|要由|要向|要按|除非|除外|但書|例外)/gu;
+const provisionEmphasis = /(?<reference>第\s*\d+[A-Z]*(?:\s*\([\dA-Za-z]+\))*\s*條|附表\s*\d+)|(?<local>第\s*(?:\([\dA-Za-z]+\)\s*)+(?:(?:、|及|或|至|與|和)\s*(?:\([\dA-Za-z]+\)\s*)+)*[款段節])|(?<term>\b[A-Z][A-Za-z]+(?:[ -]+[A-Za-z]+){0,8}\s*（[^（）\n]{1,24}）|\b[A-Z]{2,5}\s*（[^（）\n]{1,24}）)|(?<time>(?:\d+(?:\.\d+)?|[一二兩三四五六七八九十百]+)\s*(?:(?:個\s*)?月|日|年|星期|小時)(?:\s*(?:之?內|屆滿|期滿|前|後))?(?![\d年月日]))|(?<rule>唔可以|唔准|唔需要|不得|不准|毋須|無須|無需|必須|要先|須先|須在|須於|須由|須向|須按|須以|須將|要喺|要由|要向|要按|除非|除外|但書|例外)/gu;
 
 function renderReferenceButton(clause, label) {
   return `<button type="button" class="reference-cross" aria-haspopup="dialog" data-reference-clause="${escapeText(clause)}">${escapeText(label)}</button>`;
 }
 
-function renderInlineReference(label, prefix) {
+function isBuildingsOrdinanceReference(prefix) {
   // Distinguish Cap. 123 references from references to another ordinance or regulation.
   const scope = prefix.split(/[。；！？\n]/).at(-1);
   const qualifiers = [...scope.matchAll(/《([^》]+)》|(?:第\s*(\d+[A-Z]*)\s*章)|本條例|呢條例|本例|(?:上述|該|有關)條例/g)];
   const last = qualifiers.at(-1);
   const previous = qualifiers.at(-2);
-  if (last && (last[2] ? last[2] !== "123" || /附屬法例|規例/.test(scope.slice(last.index)) ||
+  return !last || !(last[2] ? last[2] !== "123" || /附屬法例|規例/.test(scope.slice(last.index)) ||
       (previous?.[1] && previous[1] !== "建築物條例") :
-      last[1] ? last[1] !== "建築物條例" : !/^(?:本條例|呢條例|本例)$/.test(last[0]))) return escapeText(label);
+      last[1] ? last[1] !== "建築物條例" : !/^(?:本條例|呢條例|本例)$/.test(last[0]));
+}
+
+function renderInlineReference(label) {
   const reference = label.startsWith("第")
     ? "§" + label.replace(/[第條\s]/g, "")
     : "Schedule " + label.replace(/[^0-9]/g, "");
@@ -783,16 +788,52 @@ function renderInlineReference(label, prefix) {
   return Object.hasOwn(boPlainProvisions, root) ? renderReferenceButton(reference, label) : escapeText(label);
 }
 
-function renderProvisionText(text) {
+function renderLocalReference(label, clause, currentPath) {
+  const entries = boPlainProvisions[clause]?.[4];
+  if (!entries) return escapeText(label);
+
+  const paths = [...label.matchAll(/\([\dA-Za-z]+\)(?:\s*\([\dA-Za-z]+\))*/g)];
+  let parentPath = currentPath?.match(/^(?:\([\dA-Za-z]+\))+/)?.[0] ?? "";
+  let html = "";
+  let offset = 0;
+  for (const [index, match] of paths.entries()) {
+    const path = match[0].replace(/\s+/g, "");
+    // Omitted parent numbers in a list refer to a sibling of the preceding item.
+    let parent = /^\(\d/.test(path) ? "" : parentPath.slice(0, parentPath.lastIndexOf("("));
+    while (parent && !entries.some(([number]) => number.startsWith(parent + path))) {
+      parent = parent.slice(0, parent.lastIndexOf("("));
+    }
+    const target = parent + path;
+    const start = index === 0 ? 0 : match.index;
+    const end = index === paths.length - 1 ? label.length : match.index + match[0].length;
+    const text = label.slice(start, end);
+    html += escapeText(label.slice(offset, start));
+    if (entries.some(([number]) => number.startsWith(target))) {
+      html += renderReferenceButton(clause + target, text);
+      parentPath = target;
+    } else {
+      html += escapeText(text);
+    }
+    offset = end;
+  }
+  return html;
+}
+
+function renderProvisionText(text, clause, path) {
   const value = boText(text);
   let html = "";
   let offset = 0;
   for (const match of value.matchAll(provisionEmphasis)) {
     const kind = match.groups.term ? "term" : match.groups.time ? "time" : "rule";
     html += escapeText(value.slice(offset, match.index));
-    html += match.groups.reference
-      ? renderInlineReference(match[0], value.slice(0, match.index))
-      : `<mark class="provision-mark provision-mark--${kind}">${escapeText(match[0])}</mark>`;
+    if (match.groups.reference || match.groups.local) {
+      const prefix = value.slice(0, match.index);
+      if (!isBuildingsOrdinanceReference(prefix)) html += escapeText(match[0]);
+      else if (match.groups.local) html += renderLocalReference(match[0], clause, path);
+      else html += renderInlineReference(match[0]);
+    } else {
+      html += `<mark class="provision-mark provision-mark--${kind}">${escapeText(match[0])}</mark>`;
+    }
     offset = match.index + match[0].length;
   }
   return html + escapeText(value.slice(offset));
@@ -831,7 +872,7 @@ function renderProvisionTree(entries, headings, section) {
     if (!item.items) {
       const paragraphs = item.text.split("\n").flatMap(paragraph =>
         paragraph.length > 140 ? paragraph.split(/(?<=[。；])(?=\S)/u) : [paragraph]);
-      return `<li class="provision-copy">${item.description ? `<strong>${renderProvisionText(item.description)}</strong>` : ""}${paragraphs.map(paragraph => `<p>${renderProvisionText(paragraph)}</p>`).join("")}</li>`;
+      return `<li class="provision-copy">${item.description ? `<strong>${renderProvisionText(item.description, section, parentPath)}</strong>` : ""}${paragraphs.map(paragraph => `<p>${renderProvisionText(paragraph, section, parentPath)}</p>`).join("")}</li>`;
     }
     const isSubsection = depth === 0 && /^\(\d/.test(item.number);
     const label = isSubsection ? `第 ${item.number} 款` : item.number;
@@ -856,14 +897,14 @@ function renderOccupationGuide() {
     <p>先搵出 <strong>14 日從邊日起計</strong>。OP 係入伙紙，TOP 係臨時入伙紙。</p>
     <div class="occupation-paths">
       <section class="occupation-path">
-        <h4>一般情況 <span>第 (7) 款</span></h4>
+        <h4>一般情況 <span>${renderProvisionText("第 (7) 款", "§21")}</span></h4>
         <ol>
           <li>當局收到用適當指明表格交嘅 OP／TOP 申請</li>
           <li><strong>由收到申請嗰日起計 14 日</strong></li>
         </ol>
       </section>
       <section class="occupation-path">
-        <h4>${renderReferenceButton("§17", "第 17 條")}要求交表現檢討 <span>第 (8) 款</span></h4>
+        <h4>${renderReferenceButton("§17", "第 17 條")}要求交表現檢討 <span>${renderProvisionText("第 (8) 款", "§21")}</span></h4>
         <ol>
           <li>當局收到所要求嘅表現檢討</li>
           <li>如果你喺之後 60 日內交 OP／TOP 申請，<strong>當作第 60 日先收到申請</strong></li>
@@ -873,7 +914,7 @@ function renderOccupationGuide() {
     </div>
     <p class="occupation-result"><strong>14 日屆滿會點？</strong> 如果當局未向業主送達列明理由嘅書面拒絕通知，許可證就視為已批。</p>
     <p>例如當局收到表現檢討後第 20 日，你就交咗申請。要等到第 60 日，先開始計嗰 14 日。</p>
-    <p class="occupation-refusal"><strong>表現檢討同拒發有咩關係？</strong> 當局可以按第 (6)(f) 段睇報告有冇交代同證明兩樣嘢：施工檢查同監測夠唔夠、岩土設計假設仲成唔成立。交代或理據不足，可以拒發。</p>
+    <p class="occupation-refusal"><strong>表現檢討同拒發有咩關係？</strong> 當局可以按${renderProvisionText("第 (6)(f) 段", "§21")}睇報告有冇交代同證明兩樣嘢：施工檢查同監測夠唔夠、岩土設計假設仲成唔成立。交代或理據不足，可以拒發。</p>
     <div class="occupation-links" aria-label="跳到相關款項">
       <button type="button" class="source-chip" data-occupation-jump="(6)">睇 (6) 拒發理由</button>
       <button type="button" class="source-chip" data-occupation-jump="(7)">睇 (7) 14 日規則</button>
@@ -914,7 +955,7 @@ function renderFlowClauses(clauses) {
   return flowClauseGroups(clauses).map(([location, articles]) => {
     const rows = articles.map(clause => {
       const [label, meaning = boFlowClauseNotes[clause]] = boFlowClauseLabels[clause] ?? boHighlights[clause];
-      return `<div><dt><span>${boText(clause)}</span> ${label}</dt><dd>${renderProvisionText(meaning)}${expandClause(clause)}</dd></div>`;
+      return `<div><dt><span>${boText(clause)}</span> ${label}</dt><dd>${renderProvisionText(meaning, clause.split("(")[0])}${expandClause(clause)}</dd></div>`;
     }).join("");
     return `<section class="bo-flow-clause-group"><h3>${boText(location)}</h3><dl class="bo-clause-breakdown">${rows}</dl></section>`;
   }).join("");
@@ -924,7 +965,7 @@ function showFrameworkSections(rowIndex) {
   const details = courses[current].framework.rows[rowIndex].at(-1);
   const content = details.groups.map(([group, sections]) =>
     `<section class="reference-item"><h3>${group}</h3><dl class="section-list">${sections.map(([section, meaning]) =>
-      `<dt>${boText(section)}</dt><dd>${renderProvisionText(meaning)}${expandClause(section)}</dd>`).join("")}</dl></section>`
+      `<dt>${boText(section)}</dt><dd>${renderProvisionText(meaning, section.split("(")[0])}${expandClause(section)}</dd>`).join("")}</dl></section>`
   ).join("") + (details.note ? `<p class="table-note">${boText(details.note)}</p>` : "");
   showFrameworkDialog(`row:${current}:${rowIndex}`, details.title, content, details.ref);
 }
@@ -996,7 +1037,7 @@ page.addEventListener("click", event => {
     const clause = button.dataset.frameworkClause;
     const [label, meaning] = boHighlights[clause];
     const [part] = courses.bo.framework.rows.find(([, , clauses]) => clauses.includes(clause));
-    showFrameworkDialog(`framework-highlight:${clause}`, `${clause}｜${label}`, `<section class="reference-item"><p class="detail-label">${boText(part)}</p><p>${renderProvisionText(meaning)}</p>${expandClause(clause)}</section>`);
+    showFrameworkDialog(`framework-highlight:${clause}`, `${clause}｜${label}`, `<section class="reference-item"><p class="detail-label">${boText(part)}</p><p>${renderProvisionText(meaning, clause.split("(")[0])}</p>${expandClause(clause)}</section>`);
     return;
   }
   if (button.dataset.frameworkRow !== undefined) {
