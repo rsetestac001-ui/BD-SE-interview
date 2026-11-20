@@ -397,8 +397,8 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   gap: 8px;
 }
 .principle-button {
-  min-height: 28px;
-  padding: 2px 6px;
+  height: 18px;
+  padding: 0 6px;
   border: 1px solid #b8cfe8;
   border-radius: 7px;
   background: #e7f0fb;
