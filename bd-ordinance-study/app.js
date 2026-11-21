@@ -913,7 +913,7 @@ function renderProvisionText(text, clause, path) {
 }
 
 function renderPrincipleButton(section, path = "") {
-  return `<button type="button" class="principle-button" aria-haspopup="dialog" data-principle-section="${escapeText(section)}" data-principle-path="${escapeText(path)}">背後原理</button>`;
+  return `<button type="button" class="principle-button" aria-haspopup="dialog" data-principle-section="${escapeText(section)}" data-principle-path="${escapeText(path)}"><span>背後原理</span></button>`;
 }
 
 function describePrincipleTarget(section, path) {
