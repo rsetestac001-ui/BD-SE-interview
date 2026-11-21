@@ -923,24 +923,18 @@ function describePrincipleTarget(section, path) {
 function openProvisionPrinciple(trigger, parent) {
   const { principleSection: section, principlePath: path } = trigger.dataset;
   const [, title, , anchor, entries] = boPlainProvisions[section];
-  const notes = boClausePrinciples[section];
-  const inactive = /^已廢除|^因時效已過而略去/.test(title) ||
-    Boolean(path && entries.find(([label, text]) => label === path && text === "原文註明呢個編號已廢除或略去。"));
-  let applicable = path;
-  while (applicable && !notes?.[applicable]) {
-    applicable = applicable.slice(0, Math.max(0, applicable.lastIndexOf("(")));
-  }
-
-  const explanation = inactive
-    ? "呢個編號留喺目錄方便對照舊文件。遇到引用呢個編號嘅舊個案，要按當時生效嘅版本理解。"
-    : notes?.[applicable] ?? boSectionPrinciples[section];
+  const inactive = /^(?:已廢除|因時效已過而略去)/.test(title) ||
+    entries.some(([label, text]) => label === path && text === "原文註明呢個編號已廢除或略去。");
+  const note = path ? boClausePrinciples[section]?.[path] : boSectionPrinciples[section];
   const provisionLabel = describePrincipleTarget(section, path);
-  const context = path && applicable !== path && !inactive
-    ? `<p class="principle-context">${escapeText(describePrincipleTarget(section, applicable))}嘅整體原理。你撳嗰款暫時未有獨立解說。</p>`
-    : "";
   const source = `${references.bo[2]}?xpid=${encodeURIComponent(anchor)}`;
-  const body = `<div class="reference-item provision-principle">${context}
-    ${explanation.split("\n").map(paragraph => `<p>${renderProvisionText(paragraph, section, applicable)}</p>`).join("")}
+  const explanation = inactive
+    ? "呢個編號已廢除或略去。查舊個案時，要對返當時有效嘅版本。"
+    : note;
+  const paragraphs = explanation
+    ? explanation.split("\n").map(paragraph => `<p>${renderProvisionText(paragraph, section, path)}</p>`).join("")
+    : '<p class="principle-context">呢段暫未有獨立原理解說。</p>';
+  const body = `<div class="reference-item provision-principle">${paragraphs}
     <a href="${source}" target="_blank" rel="noopener noreferrer">睇 ${escapeText(describePrincipleTarget(section, ""))}官方原文 ↗</a>
   </div>`;
   const origin = parent?.captureOrigin(trigger, false);
