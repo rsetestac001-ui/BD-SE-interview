@@ -403,11 +403,6 @@ function createReferenceWindow(dialog) {
     back.dataset.referenceParent = "";
     back.textContent = `← 返回 ${origin.label}`;
     referenceOrigin.append(back);
-    if (origin.sentence) {
-      const quote = document.createElement("p");
-      quote.textContent = origin.sentence;
-      referenceOrigin.append(quote);
-    }
     if (origin.explanation) {
       const context = document.createElement("section");
       context.className = "reference-connection";
@@ -421,6 +416,12 @@ function createReferenceWindow(dialog) {
       }
       referenceOrigin.append(context);
     }
+    if (origin.sentence) {
+      const quote = document.createElement("p");
+      quote.textContent = origin.sentence;
+      referenceOrigin.append(quote);
+    }
+    referenceOrigin.scrollTop = 0;
     keepDialogInView();
   }
 
