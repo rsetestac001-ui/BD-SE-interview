@@ -456,8 +456,8 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .reference-origin p {
   margin: 3px 0 0;
   color: #214572;
-  font-size: .8rem;
-  line-height: 1.38;
+  font-size: .9375rem;
+  line-height: 1.55;
   overflow-wrap: anywhere;
 }
 .provision-branch:focus {
@@ -507,12 +507,12 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .reference-connection h3 {
   margin: 0;
   color: #214572;
-  font-size: .85rem;
+  font-size: 1.0625rem;
 }
 .reference-origin .reference-connection p {
   color: var(--ink);
-  font-size: .85rem;
-  line-height: 1.45;
+  font-size: 1.0625rem;
+  line-height: 1.6;
 }
 
 dialog.has-reference-connection { --nested-dialog-max-height: min(82dvh, 680px); }
@@ -543,3 +543,84 @@ dialog.has-reference-connection { --nested-dialog-max-height: min(82dvh, 680px);
   background: #cbdfff;
 }
 .glossary-term:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+
+@media (max-width: 700px) {
+  :root {
+    --mobile-label-size: .875rem;
+    --mobile-control-size: .9375rem;
+    --mobile-body-size: 1.0625rem;
+    --mobile-reading-size: 1.125rem;
+  }
+
+  body { font-size: var(--mobile-body-size); }
+  .sidebar nav a, .sidebar nav .compare-link {
+    min-height: 44px;
+    font-size: .8125rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  .brand, .topbar { font-size: var(--mobile-label-size); }
+  .topbar > div { min-width: 0; overflow-wrap: anywhere; }
+  .hero p:last-child, .detail p, .accordion details p, .case-card p,
+  .bo-flow-purpose > p, .bo-flow-intro, .bo-flow-pillars span {
+    font-size: var(--mobile-body-size);
+  }
+  .section-heading p, .metric span, .eyebrow, .detail-label,
+  .bo-flow-purpose-eyebrow, .step-index, .bo-flow-node small,
+  .provision-legend, .bo-provision-source, .workflow-condition,
+  .provision-chart-node span, .quiz-count, .quiz-options small,
+  .occupation-path h4 span, .favorite-pinpoint {
+    font-size: var(--mobile-label-size);
+  }
+  .step, .source-chip, .next a, .table-note,
+  .dialog-head .dialog-quiz-button, .dialog-head .dialog-flow-button,
+  .provision-chart-intro, .provision-chart-node small,
+  .bo-framework-routes .workflow-route p, .provision-principle .principle-context {
+    font-size: var(--mobile-control-size);
+  }
+  .bo-flow-node strong, .bo-flow-lookup h3, .bo-flow-pillars strong,
+  .bo-flow-clause-group h3, .workflow-question, .provision-chart-node strong,
+  .provision-chart-group h3, .occupation-path h4, .reference-quiz h3 {
+    font-size: var(--mobile-body-size);
+  }
+  .source-chip { max-width: 100%; overflow-wrap: anywhere; }
+  .table-wrap table { font-size: var(--mobile-control-size); }
+  .framework .table-wrap table { min-width: 35rem; }
+  .framework th, .framework td { font-size: inherit; }
+  .section-list { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .section-list dd + dt { margin-top: 8px; }
+
+  .floating .dialog-head { padding: 10px 14px; }
+  .floating .dialog-title {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+  .floating .dialog-title::after { font-size: var(--mobile-label-size); }
+  .dialog-head .dialog-actions button { height: 44px; }
+  .dialog-head .dialog-close-button { width: 44px; }
+  .floating .dialog-body {
+    min-height: 0;
+    padding-inline: 14px;
+    font-size: var(--mobile-reading-size);
+    overflow-wrap: anywhere;
+  }
+  .provision-copy > strong { font-size: inherit; }
+  .principle-button {
+    height: auto;
+    min-height: 30px;
+    font-size: var(--mobile-label-size);
+  }
+  .reference-origin { padding-inline: 14px; }
+  .reference-origin p { font-size: var(--mobile-control-size); }
+  .reference-connection h3, .reference-origin .reference-connection p {
+    font-size: var(--mobile-reading-size);
+  }
+  .has-reference-connection .reference-origin { max-height: min(31dvh, 15rem); }
+}
+
+@media (max-width: 380px) {
+  .hero { grid-template-columns: minmax(0, 1fr); }
+  .hero-art { display: none; }
+  .bo-flow-grid { grid-template-columns: minmax(0, 1fr); }
+}
