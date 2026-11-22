@@ -31,15 +31,6 @@ dialog{color:var(--ink);max-width:550px;width:calc(100% - 30px);max-height:min(7
 .bo-flow-node strong{font-size:14px;line-height:1.35}
 .bo-flow-node small{font-size:11px;color:var(--green);line-height:1.4;margin-top:4px}
 .bo-flow-arrow{display:grid;place-items:center;height:26px;color:var(--green);font-size:20px;line-height:1}
-.bo-flow-fork{--branch-line:#76a590;position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding-block:13px}
-.bo-flow-fork::before,.bo-flow-fork::after{content:"";position:absolute;inset-inline:calc((100% - 16px)/6);border-top:1px solid var(--branch-line)}
-.bo-flow-fork::before{top:0}
-.bo-flow-fork::after{bottom:0}
-.bo-flow-fork>div{position:relative}
-.bo-flow-fork>div::before,.bo-flow-fork>div::after{content:"";position:absolute;left:50%;height:13px;border-left:1px solid var(--branch-line)}
-.bo-flow-fork>div::before{bottom:100%}
-.bo-flow-fork>div::after{top:100%}
-.bo-flow-fork .bo-flow-node{background:var(--mint);text-align:center}
 .bo-flow-lookup h3{margin:20px 0 8px;border-top:1px solid var(--line);padding-top:15px;font-size:15px}
 .bo-flow-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .bo-flow-grid .bo-flow-node{background:#fbfdf9}
@@ -269,13 +260,6 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .provision-chart-group { margin-top: 14px; padding: 12px; border: 1px solid #c9dbef; border-radius: 10px; background: #f2f7fd; }
 .provision-chart-group h3 { margin-bottom: 8px; color: #214572; font-size: 1rem; }
 .provision-chart-rows { display: grid; gap: 6px; }
-.provision-chart-rows.is-connected > .provision-chart-row + .provision-chart-row::before {
-  content: "↓";
-  grid-column: 1 / -1;
-  justify-self: center;
-  color: #214572;
-  font-weight: 750;
-}
 .provision-chart-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); gap: 6px; }
 .provision-chart-node {
   display: grid;
@@ -296,6 +280,97 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .provision-chart-node span { font-size: .74rem; color: #355b85; font-weight: 750; }
 .provision-chart-node strong { font-size: .89rem; }
 .provision-chart-node small { color: var(--muted); font-size: .79rem; }
+.workflow-sequence, .workflow-branches { margin: 0; padding: 0; list-style: none; }
+.workflow-sequence > .workflow-entry + .workflow-entry::before {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 16px;
+  margin: 2px auto;
+  background: #517eac;
+  clip-path: polygon(40% 0, 60% 0, 60% 58%, 100% 58%, 50% 100%, 0 58%, 40% 58%);
+}
+.provision-chart > .workflow-sequence { margin-top: 14px; }
+.course-workflow .workflow-sequence { max-width: 740px; margin-inline: auto; }
+.workflow-question {
+  border: 1px solid #8a723e;
+  border-radius: 8px;
+  background: #fff6db;
+  color: #593e14;
+  padding: 8px 10px;
+  font-size: .9rem;
+  font-weight: 800;
+  text-align: center;
+}
+.workflow-question::before { content: "◆"; margin-inline-end: 6px; }
+.workflow-branches {
+  margin-inline-start: 9px;
+  padding: 0 0 4px 12px;
+  border-inline-start: 2px solid #7190ad;
+}
+.workflow-route { position: relative; padding-block-start: 8px; min-width: 0; }
+.workflow-condition {
+  display: block;
+  margin-bottom: 5px;
+  color: #214572;
+  font-size: .79rem;
+}
+.workflow-condition::before {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: -12px;
+  width: 10px;
+  height: 8px;
+  background: #517eac;
+  clip-path: polygon(0 40%, 58% 40%, 58% 0, 100% 50%, 58% 100%, 58% 60%, 0 60%);
+}
+.workflow-sequence .provision-chart-node { width: 100%; }
+.workflow-sequence .is-terminal { border-color: #9cbfac; background: #eef7ef; }
+.workflow-sequence .is-terminal:hover { background: #e2f1e6; }
+.workflow-reference { margin-top: 14px; }
+.workflow-reference summary { cursor: pointer; color: #214572; font-weight: 750; }
+.bo-framework-question { display: block; width: 100%; cursor: pointer; }
+.bo-framework-question:hover { background: #ffedb5; }
+.bo-framework-routes .bo-flow-node { height: auto; }
+.bo-framework-routes .workflow-route p { margin-top: 5px; color: var(--muted); font-size: .81rem; }
+@media (min-width: 650px) {
+  .bo-framework-routes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 14px 0 0;
+    padding: 0;
+    border: 0;
+    position: relative;
+  }
+  .bo-framework-routes::before {
+    content: "";
+    position: absolute;
+    left: calc((100% - 24px) / 6);
+    right: calc((100% - 24px) / 6);
+    top: 0;
+    border-top: 2px solid #7190ad;
+  }
+  .bo-framework-routes::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    height: 14px;
+    border-left: 2px solid #7190ad;
+  }
+  .bo-framework-routes .workflow-route { padding-top: 16px; }
+  .bo-framework-routes .workflow-condition { text-align: center; }
+  .bo-framework-routes .workflow-condition::before {
+    top: 0;
+    left: calc(50% - 4px);
+    width: 8px;
+    height: 13px;
+    clip-path: polygon(40% 0, 60% 0, 60% 58%, 100% 58%, 50% 100%, 0 58%, 40% 58%);
+  }
+}
+
 @media (max-width: 480px) {
   .floating .dialog-head { flex-wrap: wrap; }
   .dialog-head .dialog-actions { margin-left: auto; }

@@ -212,23 +212,31 @@ function renderBoFlowchart() {
         <p><strong>由立法目的落到工程流程：</strong>正因為法例要由源頭守住樓宇安全，準備做工程時先要核對工程受唔受規管、行邊種法定程序同委任邊類合資格人士；樓宇落成後則靠定期檢驗同執法機制持續把關。</p>
         <p>搵條文時由大到細。例如 <strong>第 123 章 › 第 2 部（樓宇管制） › 第 14 條</strong>。第 1、2、2A 條係第 1 部之前嘅開頭條文。</p>
       </div>
-      <div class="bo-flow-main" role="group" aria-label="由法例適用、開工完工到定期檢驗">
-        ${node("opening")}${arrow}
+      <div class="bo-flow-main" role="group" aria-label="擬做工程嘅開工程序">
         ${node("definition")}${arrow}
-        ${node("choose")}${arrow}
-        <div class="bo-flow-fork" role="group" aria-label="三種開工程序">
-          ${["standard", "minor", "exempt"].map(key => `<div>${node(key)}</div>`).join("")}
-        </div>
-        ${arrow}${node("people")}${arrow}${node("complete")}${arrow}${node("inspection")}
+        <button type="button" class="workflow-question bo-framework-question" data-bo-flow="choose" aria-haspopup="dialog">核對工程性質後，行邊條程序？</button>
+        <ul class="workflow-branches bo-framework-routes">
+          <li class="workflow-route"><strong class="workflow-condition">一般工程</strong>
+            ${node("people")}${arrow}${node("standard")}${arrow}${node("complete")}
+          </li>
+          <li class="workflow-route"><strong class="workflow-condition">符合小型工程簡化規定</strong>
+            ${node("minor")}<p>按級別委任合資格人士及承建商，交適用嘅開工及完工文件。</p>
+          </li>
+          <li class="workflow-route"><strong class="workflow-condition">適用法定豁免</strong>
+            ${node("exempt")}<p>核對豁免涵蓋嘅工程範圍同仍適用嘅規定。</p>
+          </li>
+        </ul>
       </div>
       <div class="bo-flow-lookup">
+        <h3>已落成樓宇收到強制驗樓／驗窗法定通知</h3>
+        <div class="bo-flow-grid">${node("inspection")}</div>
         <h3>工程出事、樓宇／斜坡有危險或收到決定，查邊度？</h3>
         <div class="bo-flow-grid">
           ${["orders", "procedure", "offences", "appeals"].map(node).join("")}
         </div>
         <h3>遇到放寬、舊例或過渡個案</h3>
         <div class="bo-flow-grid">
-          ${["modification", "transitional", "saving", "minorTransition"].map(node).join("")}
+          ${["opening", "modification", "transitional", "saving", "minorTransition"].map(node).join("")}
         </div>
       </div>
     </div>
@@ -236,11 +244,16 @@ function renderBoFlowchart() {
 }
 
 function renderCourse(course) {
+  const inspectionClause = current === "mbis" ? "§30B" : "§30C";
   return `${hero(course, current)}
     <div class="metrics">${course.metrics.map(([metric, label]) => `<div class="metric"><strong>${boText(metric)}</strong><span>${boText(label)}</span></div>`).join("")}</div>
     ${course.framework ? `${renderBoFlowchart()}<section class="framework">${heading(course.framework.heading)}${studyTable(course.framework)}${renderProvisionIndex(course.framework)}</section>` : ""}
-    <section aria-label="流程圖">
-      ${heading(current === "bo" ? "由睇例到落手做" : "由收到通知到做完", "撳每一步，睇邊個做、點解要做")}
+    ${course.framework ? "" : `<section class="course-workflow" aria-label="驗樓或驗窗流程圖">
+      ${heading(current === "mbis" ? "強制驗樓流程圖" : "強制驗窗流程圖")}
+      <div class="bo-flow-board">${renderWorkflow(boWorkflows[inspectionClause], inspectionClause)}</div>
+    </section>`}
+    <section aria-label="逐步溫習">
+      ${heading(current === "bo" ? "由睇例到落手做" : "逐步溫習", "撳每一步，睇邊個做、點解要做")}
       <div class="flow" role="tablist" aria-label="流程步驟" style="--steps:${course.steps.length}">
         ${course.steps.map(([label], i) =>
           `<button class="step" id="step-${i}" type="button" role="tab" aria-selected="${i === selectedStep}" aria-controls="step-detail" tabindex="${i === selectedStep ? 0 : -1}" data-step="${i}"><span class="step-index">${String(i + 1).padStart(2, "0")}</span>${label}</button>`
@@ -482,6 +495,8 @@ function createReferenceWindow(dialog) {
     quizState = undefined;
     quizButton.hidden = keys.length === 0;
     flowButton.hidden = keys.length === 0;
+    flowButton.textContent = keys.some(key => boWorkflows[key] || boPartOneSections.includes(key))
+      ? "Flow chart" : "條文索引";
     quizButton.setAttribute("aria-expanded", "false");
     if (keys.length) {
       const panel = document.createElement("section");
@@ -718,11 +733,14 @@ function openProvisionFlow(keys, parent, trigger, clause) {
 
   const origin = parent.captureOrigin(trigger);
   const chart = createReferenceWindowFor(key);
-  const roleSections = ["§3", "§5", "§5A", "§7", "§8", "§8B", "§11", "§11A", "§13"];
-  const options = keys.some(key => roleSections.includes(key)) ? ["part-one-roles", ...keys] : keys;
-  if (["§7", "§8B", "§13"].every(key => keys.includes(key))) clause = "part-one-roles";
+  const options = keys.some(key => boPartOneSections.includes(key)) ? ["part-one-roles", ...keys] : keys;
+  if (
+    (boPartOneSections.includes(clause) && !boWorkflows[clause]) ||
+    ["§7", "§8B", "§13"].every(key => keys.includes(key))
+  ) clause = "part-one-roles";
   const show = () => {
-    const title = clause === "part-one-roles" ? "第 1 部｜邊個負責咩？" : `${clause}｜條文流程圖`;
+    const title = clause === "part-one-roles" ? "第 1 部｜邊個負責咩？" :
+      `${clause}｜${boWorkflows[clause] ? "條文流程圖" : "條文索引"}`;
     chart.showFrameworkDialog(title, renderProvisionFlow(clause, options), "bo", parent);
     chart.setOrigin(origin);
     chart.focus();
@@ -753,29 +771,52 @@ function openProvisionFlow(keys, parent, trigger, clause) {
   show();
 }
 
+function provisionFlowButton(path, label, note, section, clause, terminal = false) {
+  return `<button type="button" class="provision-chart-node${terminal ? " is-terminal" : ""}" data-provision-flow-path="${escapeText(path)}"${section ? ` data-provision-flow-section="${escapeText(section)}"` : ""}>
+    <span>${escapeText(section ? boText(section + path) : path || boText(clause))}</span>
+    <strong>${escapeText(label)}</strong>${note ? `<small>${escapeText(note)}</small>` : ""}
+  </button>`;
+}
+
+function renderWorkflow(sequence, clause) {
+  return `<ol class="workflow-sequence">${sequence.map(({ label, path, section, note, terminal, branches }) => `
+    <li class="workflow-entry">${branches ? `
+      <div class="workflow-question">${escapeText(label)}</div>
+      <ul class="workflow-branches">${branches.map(branch => `
+        <li class="workflow-route">
+          <strong class="workflow-condition">${escapeText(branch.label)}</strong>
+          ${renderWorkflow(branch.steps, clause)}
+        </li>`).join("")}</ul>`
+      : provisionFlowButton(path, label, note, section, clause, terminal)}
+    </li>`).join("")}</ol>`;
+}
+
 function renderProvisionFlow(clause, options) {
-  const title = boPlainProvisions[clause]?.[1];
-  const fallback = boProvisionHeadings[clause];
-  const flow = clause === "part-one-roles" ? boPartOneRoles : boProvisionFlows[clause];
-  const [intro, groups] = flow ?? [
-    "呢張圖按款號幫你搵內容。撳一格就可以睇嗰款。",
-    [["款項對照", typeof fallback === "object"
-      ? Object.entries(fallback).map(([path, heading]) => [[path.replace("-", " 至 "), heading]])
-      : [[["", fallback || title]]], false]]
-  ];
-  const picker = options.length > 1 ? `<label class="quiz-picker">揀流程圖 <select data-provision-flow-select>${options.map(key => {
+  const heading = boProvisionHeadings[clause];
+  const reference = clause === "part-one-roles" ? boPartOneRoles : boProvisionFlows[clause];
+  const workflow = boWorkflows[clause];
+  const fallbackRows = typeof heading === "object"
+    ? Object.entries(heading).map(([path, label]) => [[path.replace("-", " 至 "), label]])
+    : [[["", heading || boPlainProvisions[clause]?.[1]]]];
+  const [intro, groups] = reference ?? ["按款號查閱條文。", [["款項對照", fallbackRows]]];
+  const picker = options.length > 1 ? `<label class="quiz-picker">揀條文 <select data-provision-flow-select>${options.map(key => {
     const label = key === "part-one-roles" ? "第 1 部｜邊個負責咩？" : `${boText(key)}｜${boPlainProvisions[key][1]}`;
     return `<option value="${escapeText(key)}"${key === clause ? " selected" : ""}>${escapeText(label)}</option>`;
   }).join("")}</select></label>` : "";
+  const referenceGroups = groups.map(([title, rows]) => `<section class="provision-chart-group">
+    <h3>${escapeText(title)}</h3>
+    <div class="provision-chart-rows">
+      ${rows.map(row => `<div class="provision-chart-row">${row.map(([path, label, note, section]) =>
+        provisionFlowButton(path, label, note, section, clause)
+      ).join("")}</div>`).join("")}
+    </div>
+  </section>`).join("");
   return `<div class="provision-chart">
     ${picker}<p class="provision-chart-intro">${escapeText(intro)}</p>
-    ${groups.map(([heading, rows, connected = true]) => `<section class="provision-chart-group">
-      <h3>${escapeText(heading)}</h3>
-      <div class="provision-chart-rows${connected ? " is-connected" : ""}">
-      ${rows.map(row => `<div class="provision-chart-row">${row.map(([path, label, note, section]) => `<button type="button" class="provision-chart-node" data-provision-flow-path="${escapeText(path)}"${section ? ` data-provision-flow-section="${escapeText(section)}"` : ""}>
-        <span>${escapeText(section ? boText(section + path) : path || boText(clause))}</span><strong>${escapeText(label)}</strong>${note ? `<small>${escapeText(note)}</small>` : ""}
-      </button>`).join("")}</div>`).join("")}</div>
-    </section>`).join("")}
+    ${workflow ? `
+      ${renderWorkflow(workflow, clause)}
+      <details class="workflow-reference"><summary>款項對照同補充資料</summary>${referenceGroups}</details>`
+      : referenceGroups}
   </div>`;
 }
 
@@ -1141,6 +1182,11 @@ page.addEventListener("click", event => {
     if (!entry) return;
     const referenceWindow = openProvision(entry.section);
     if (entry.path) referenceWindow.jumpToSubsection(entry.path);
+    return;
+  }
+  if (button.dataset.provisionFlowSection) {
+    const { provisionFlowSection, provisionFlowPath } = button.dataset;
+    openProvision(provisionFlowSection).showProvisionPath(provisionFlowSection, provisionFlowPath);
     return;
   }
   if (button.dataset.boProvision) {

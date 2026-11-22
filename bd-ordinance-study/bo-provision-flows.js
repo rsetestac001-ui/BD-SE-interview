@@ -1,5 +1,4 @@
-// Each group contains rows of [subsection, label, explanation, optional section] cards.
-// Rows within the same group are connected; cards sitting side by side are alternatives or comparisons.
+// Supplementary references grouped by topic. Each entry links to a subsection.
 const boInspectionComparison = ["30B 同 30C 逐款對照", [
   [["(1)", "30B｜樓齡 30 年或以上", "查樓宇指定部分。", "§30B"],
    ["(1)", "30C｜樓齡 10 年或以上", "查窗戶。", "§30C"]],
