@@ -1052,21 +1052,21 @@ function renderOccupationGuide() {
       <section class="occupation-path">
         <h4>一般情況 <span>${renderProvisionText("第 (7) 款", "§21")}</span></h4>
         <ol>
-          <li>當局收到用適當指明表格交嘅 OP／TOP 申請</li>
-          <li><strong>由收到申請嗰日起計 14 日</strong></li>
+          <li>申請人用指明表格提交 OP／TOP 申請</li>
+          <li><strong>由建築事務監督收到申請嗰日起計 14 日</strong></li>
         </ol>
       </section>
       <section class="occupation-path">
         <h4>${renderReferenceButton("§17", "第 17 條")}要求交表現檢討 <span>${renderProvisionText("第 (8) 款", "§21")}</span></h4>
         <ol>
-          <li>當局收到所要求嘅表現檢討</li>
-          <li>如果你喺之後 60 日內交 OP／TOP 申請，<strong>當作第 60 日先收到申請</strong></li>
+          <li>建築事務監督收到第 17 條要求嘅表現檢討</li>
+          <li>如果申請人喺之後 60 日內交 OP／TOP 申請，法律<strong>當建築事務監督喺第 60 日先收到申請</strong></li>
           <li><strong>由呢個當作收到申請嘅日子起計 14 日</strong></li>
         </ol>
       </section>
     </div>
-    <p class="occupation-result"><strong>14 日屆滿會點？</strong> 如果當局未向業主送達列明理由嘅書面拒絕通知，許可證就視為已批。</p>
-    <p>例如當局收到表現檢討後第 20 日，你就交咗申請。要等到第 60 日，先開始計嗰 14 日。</p>
+    <p class="occupation-result"><strong>14 日屆滿會點？</strong> 如果建築事務監督未向樓宇業主送達寫明理由嘅書面拒絕通知，許可證就視為已批。</p>
+    <p>例如建築事務監督收到表現檢討後，申請人喺第 20 日交表。法律仍然由第 60 日先開始計嗰 14 日。</p>
     <p class="occupation-refusal"><strong>表現檢討同拒發有咩關係？</strong> 當局可以按${renderProvisionText("第 (6)(f) 段", "§21")}睇報告有冇交代同證明兩樣嘢：施工檢查同監測夠唔夠、岩土設計假設仲成唔成立。交代或理據不足，可以拒發。</p>
     <div class="occupation-links" aria-label="跳到相關款項">
       <button type="button" class="source-chip" data-occupation-jump="(6)">睇 (6) 拒發理由</button>
