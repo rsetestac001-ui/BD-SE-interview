@@ -525,3 +525,21 @@ dialog.has-reference-connection { --nested-dialog-max-height: min(82dvh, 680px);
   overflow: auto;
   overscroll-behavior: contain;
 }
+
+
+.glossary-term {
+  display: inline;
+  max-width: 100%;
+  color: #214572;
+  border: 0;
+  font: inherit;
+  font-weight: 700;
+  text-align: start;
+  text-decoration: underline dotted;
+  text-underline-offset: .15em;
+  overflow-wrap: anywhere;
+}
+.glossary-term:hover, .glossary-term:focus-visible {
+  background: #cbdfff;
+}
+.glossary-term:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

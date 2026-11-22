@@ -11,7 +11,21 @@ const favoritesStorageKey = "bd-ordinance-study:favorites:v1";
 let favorites = readFavorites();
 let favoritesStorageError = false;
 
+function plainStudyText(value) {
+  return value
+    .replace(/(?:未能|未有|不能|未|不|唔)信納/g, "未能確認")
+    .replace(/令建築事務監督信納/g, "畀建築事務監督確認")
+    .replace(/信納/g, "確認")
+    .replace(/猶如果/g, "就好似")
+    .replace(/該等/g, "嗰啲")
+    .replace(/當其時/g, "當時")
+    .replace(/述明/g, "寫明")
+    .replace(/妥為/g, "妥善")
+    .replace(/予以(?=接受|批准|拒絕|處理|銷毀|撤銷)/g, "");
+}
+
 function boText(value) {
+  value = plainStudyText(value);
   if (current !== "bo" && current !== "favorites") return value;
   return value
     .replace(/\bPart\s+(\d+[A-Z]*)\b/g, "第 $1 部")
@@ -110,7 +124,7 @@ const drawings = {
 function hero(course, route) {
   const picture = drawings[route];
   return `<section class="hero">
-    <div><p class="eyebrow">${boText(course.eyebrow)}</p><h1>${course.title}</h1><p>${boText(course.intro)}</p></div>
+    <div><p class="eyebrow">${boText(course.eyebrow)}</p><h1>${course.title}</h1><p>${renderProvisionText(course.intro)}</p></div>
     ${picture ? `<svg class="hero-art" viewBox="0 0 205 190" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">${picture}</svg>` : ""}
   </section>`;
 }
@@ -129,10 +143,10 @@ function stepDetail(course, index) {
   const [label, title, explanation, principle, example, refs] = course.steps[index];
   const branch = current === "mbis" && index === 3 ? [5, 4] : current === "mwis" && index === 3 ? [4, 4] : null;
   return `<p class="eyebrow">${String(index + 1).padStart(2, "0")} / ${label}</p>
-    <h3>${boText(title)}</h3><p>${boText(explanation)}</p>
+    <h3>${boText(title)}</h3><p>${renderProvisionText(explanation)}</p>
     <div class="detail-grid">
-      <div><div class="detail-label">點解要咁做？</div><p>${boText(principle)}</p></div>
-      <div><div class="detail-label">遇到呢個情況點做？</div><p>${boText(example)}</p></div>
+      <div><div class="detail-label">點解要咁做？</div><p>${renderProvisionText(principle)}</p></div>
+      <div><div class="detail-label">遇到呢個情況點做？</div><p>${renderProvisionText(example)}</p></div>
     </div>${branch ? `<div class="repair-branches" aria-label="修理同交表">
       <button type="button" class="source-chip" data-jump="${branch[0]}">唔使整 → 睇點交表</button>
       <button type="button" class="source-chip" data-jump="${branch[1]}">${current === "mbis" ? "要整 → 睇邊個跟" : "要整 → 睇邊個簽表"}</button>
@@ -162,7 +176,7 @@ function studyTable({ columns, rows, note, ref, rowRanges }) {
 function practiceCard(item, index) {
   const [title, prompt, choices] = item;
   return `<details class="case-card"><summary>${boText(title)}</summary><div>
-    <p>${boText(prompt)}</p>
+    <p>${renderProvisionText(prompt)}</p>
     <div class="choice-set" role="group" aria-label="選擇答案">${choices.map((choice, choiceIndex) =>
       `<button class="choice" type="button" aria-pressed="false" data-case="${index}" data-choice="${choiceIndex}">${boText(choice)}</button>`
     ).join("")}</div>
@@ -263,7 +277,7 @@ function renderCourse(course) {
     </section>
     ${course.table ? `<section>${heading(course.table.heading)}${studyTable(course.table)}</section>` : ""}
     <section>${heading(course.extraTitle)}
-      <div class="accordion">${course.extras.map(([question, answer]) => `<details><summary>${boText(question)}</summary><p>${boText(answer)}</p></details>`).join("")}</div>
+      <div class="accordion">${course.extras.map(([question, answer]) => `<details><summary>${boText(question)}</summary><p>${renderProvisionText(answer)}</p></details>`).join("")}</div>
     </section>
     <section>${heading("試答面試題", "揀答案之後睇面試同對市民點講")}
       ${course.cases.map(practiceCard).join("")}
@@ -576,7 +590,7 @@ function createReferenceWindow(dialog) {
     const source = `${references.bo[2]}?xpid=${encodeURIComponent(boPlainProvisions[key][3])}`;
     const display = value => escapeText(boText(value));
     panel.innerHTML = `${picker}<p class="quiz-count">第 ${index + 1}／${questions.length} 題 · ${display(key)}</p>
-      <h3 tabindex="-1" data-quiz-focus>${display(prompt)}</h3>
+      <h3 tabindex="-1" data-quiz-focus>${renderProvisionText(prompt, key, pinpoint)}</h3>
       <div class="quiz-options">${quizState.options.map((option, i) => {
         const status = complete ? option === answer ? "right" : selected === i ? "wrong" : "" : "";
         return `<button type="button" data-quiz-option="${i}"${complete ? " disabled" : ""}${status ? ` class="${status}"` : ""}>${display(option)}${status ? `<small>${status === "right" ? "正確答案" : "你揀咗呢項"}</small>` : ""}</button>`;
@@ -635,6 +649,11 @@ function createReferenceWindow(dialog) {
   });
 
   referenceContent.addEventListener("click", event => {
+    const term = event.target.closest("[data-bo-term]");
+    if (term) {
+      openGlossaryDefinition(term, controller);
+      return;
+    }
     const principle = event.target.closest("[data-principle-section]");
     if (principle) {
       openProvisionPrinciple(principle, controller);
@@ -774,14 +793,14 @@ function openProvisionFlow(keys, parent, trigger, clause) {
 function provisionFlowButton(path, label, note, section, clause, terminal = false) {
   return `<button type="button" class="provision-chart-node${terminal ? " is-terminal" : ""}" data-provision-flow-path="${escapeText(path)}"${section ? ` data-provision-flow-section="${escapeText(section)}"` : ""}>
     <span>${escapeText(section ? boText(section + path) : path || boText(clause))}</span>
-    <strong>${escapeText(label)}</strong>${note ? `<small>${escapeText(note)}</small>` : ""}
+    <strong>${escapeText(plainStudyText(label))}</strong>${note ? `<small>${escapeText(plainStudyText(note))}</small>` : ""}
   </button>`;
 }
 
 function renderWorkflow(sequence, clause) {
   return `<ol class="workflow-sequence">${sequence.map(({ label, path, section, note, terminal, branches }) => `
     <li class="workflow-entry">${branches ? `
-      <div class="workflow-question">${escapeText(label)}</div>
+      <div class="workflow-question">${escapeText(plainStudyText(label))}</div>
       <ul class="workflow-branches">${branches.map(branch => `
         <li class="workflow-route">
           <strong class="workflow-condition">${escapeText(branch.label)}</strong>
@@ -812,7 +831,7 @@ function renderProvisionFlow(clause, options) {
     </div>
   </section>`).join("");
   return `<div class="provision-chart">
-    ${picker}<p class="provision-chart-intro">${escapeText(intro)}</p>
+    ${picker}<p class="provision-chart-intro">${renderProvisionText(intro, clause)}</p>
     ${workflow ? `
       ${renderWorkflow(workflow, clause)}
       <details class="workflow-reference"><summary>款項對照同補充資料</summary>${referenceGroups}</details>`
@@ -839,7 +858,7 @@ function renderProvisionIndex(framework) {
     }).join("")}</details>`;
 }
 
-const provisionEmphasis = /(?<reference>第\s*\d+[A-Z]*(?:\s*\([\dA-Za-z]+\))*\s*條|附表\s*\d+)|(?<local>第\s*(?:\([\dA-Za-z]+\)\s*)+(?:(?:、|及|或|至|與|和)\s*(?:\([\dA-Za-z]+\)\s*)+)*[款段節])|(?<term>\b[A-Z][A-Za-z]+(?:[ -]+[A-Za-z]+){0,8}\s*（[^（）\n]{1,24}）|\b[A-Z]{2,5}\s*（[^（）\n]{1,24}）)|(?<time>(?:\d+(?:\.\d+)?|[一二兩三四五六七八九十百]+)\s*(?:(?:個\s*)?月|日|年|星期|小時)(?:\s*(?:之?內|屆滿|期滿|前|後))?(?![\d年月日]))|(?<rule>唔可以|唔准|唔需要|不得|不准|毋須|無須|無需|必須|要先|須先|須在|須於|須由|須向|須按|須以|須將|要喺|要由|要向|要按|除非|除外|但書|例外)/gu;
+const provisionEmphasis = new RegExp(String.raw`(?<reference>第\s*\d+[A-Z]*(?:\s*\([\dA-Za-z]+\))*\s*條|附表\s*\d+)|(?<local>第\s*(?:\([\dA-Za-z]+\)\s*)+(?:(?:、|及|或|至|與|和)\s*(?:\([\dA-Za-z]+\)\s*)+)*[款段節])|(?<term>${glossaryTermPattern})|(?<time>(?:\d+(?:\.\d+)?|[一二兩三四五六七八九十百]+)\s*(?:(?:個\s*)?月|日|年|星期|小時)(?:\s*(?:之?內|屆滿|期滿|前|後))?(?![\d年月日]))|(?<rule>唔可以|唔准|唔需要|不得|不准|毋須|無須|無需|必須|要先|須先|須在|須於|須由|須向|須按|須以|須將|要喺|要由|要向|要按|除非|除外|但書|例外)`, "giu");
 
 function explainBoReference({ section, path, lead, rest }, reference, targetSection, targetPath) {
   const note = boReferenceNotes[(section ?? "") + path]?.[reference];
@@ -938,19 +957,46 @@ function renderProvisionText(text, clause, path) {
   let html = "";
   let offset = 0;
   for (const match of value.matchAll(provisionEmphasis)) {
-    const kind = match.groups.term ? "term" : match.groups.time ? "time" : "rule";
+    const kind = match.groups.time ? "time" : "rule";
     html += escapeText(value.slice(offset, match.index));
     if (match.groups.reference || match.groups.local) {
       const prefix = value.slice(0, match.index);
       if (!isBuildingsOrdinanceReference(prefix)) html += escapeText(match[0]);
       else if (match.groups.local) html += renderLocalReference(match[0], clause, path);
       else html += renderInlineReference(match[0], clause, path);
+    } else if (match.groups.term) {
+      html += renderGlossaryButton(match[0]);
     } else {
       html += `<mark class="provision-mark provision-mark--${kind}">${escapeText(match[0])}</mark>`;
     }
     offset = match.index + match[0].length;
   }
   return html + escapeText(value.slice(offset));
+}
+
+function renderGlossaryButton(label) {
+  const entry = glossaryEntry(label);
+  if (!entry) return escapeText(label);
+  return `<button type="button" class="provision-mark provision-mark--term glossary-term" data-bo-term="${escapeText(entry[0])}" aria-haspopup="dialog">${escapeText(label)}</button>`;
+}
+
+function openGlossaryDefinition(trigger, parent) {
+  const [english, chinese, meaning, clause, , official] = glossaryEntry(trigger.dataset.boTerm);
+  const origin = parent?.captureOrigin(trigger, false);
+  const source = clause ? renderReferenceButton(clause, `睇 ${boText(clause)}`) : "";
+  const external = official ? `<a href="${escapeText(official[1])}" target="_blank" rel="noopener noreferrer">${escapeText(official[0])} ↗</a>` : "";
+  const body = `<div class="reference-item provision-principle glossary-definition">
+    ${meaning.split("\n").map(paragraph => `<p>${escapeText(paragraph)}</p>`).join("")}
+    ${source || external ? `<div class="source-row">${source}${external}</div>` : ""}
+  </div>`;
+  openReferenceWindow(`term:${parent?.dialog.id ?? "page"}:${english}`, (window, anchor) => {
+    window.showFrameworkDialog(`${english}（${chinese}）`, body, null, anchor);
+    window.setOrigin(origin);
+    window.dialog.addEventListener("keydown", event => {
+      if (event.key === "Escape") window.dialog.close();
+    });
+    if (!origin) window.dialog.addEventListener("close", () => trigger.focus({ preventScroll: true }), { once: true });
+  }, parent);
 }
 
 function renderPrincipleButton(section, path = "") {
@@ -1033,15 +1079,15 @@ function renderProvisionTree(entries, headings, section) {
     const path = parentPath + item.number;
     const number = `<div class="provision-number">${escapeText(label)}</div>`;
     const caption = `<div class="provision-caption">${number}${isSubsection ? renderFavoriteButton(section, path) : ""}${renderPrincipleButton(section, path)}</div>`;
-    return `<li class="provision-branch" data-provision-path="${escapeText(path)}">${caption}${heading ? renderProvisionHeading(heading) : ""}<ol role="list">${renderItems(item.items, depth + 1, path)}</ol></li>`;
+    return `<li class="provision-branch" data-provision-path="${escapeText(path)}">${caption}${heading ? renderProvisionHeading(heading, section, path) : ""}<ol role="list">${renderItems(item.items, depth + 1, path)}</ol></li>`;
   }).join("");
   const introduction = typeof headings === "string"
-    ? `<li class="provision-caption">${renderProvisionHeading(headings)}${renderFavoriteButton(section)}</li>` : "";
+    ? `<li class="provision-caption">${renderProvisionHeading(headings, section)}${renderFavoriteButton(section)}</li>` : "";
   return `<ol class="provision-tree" role="list">${introduction}${renderItems(root.items, 0)}</ol>`;
 }
 
-function renderProvisionHeading(heading) {
-  return `<p class="provision-heading">${escapeText(heading)}</p>`;
+function renderProvisionHeading(heading, section, path) {
+  return `<p class="provision-heading">${renderProvisionText(heading, section, path)}</p>`;
 }
 
 function renderOccupationGuide() {
@@ -1057,9 +1103,9 @@ function renderOccupationGuide() {
         </ol>
       </section>
       <section class="occupation-path">
-        <h4>${renderReferenceButton("§17", "第 17 條")}要求交表現檢討 <span>${renderProvisionText("第 (8) 款", "§21")}</span></h4>
+        <h4>${renderReferenceButton("§17", "第 17 條")}要求交${renderGlossaryButton("表現檢討")} <span>${renderProvisionText("第 (8) 款", "§21")}</span></h4>
         <ol>
-          <li>建築事務監督收到第 17 條要求嘅表現檢討</li>
+          <li>建築事務監督收到第 17 條要求嘅${renderGlossaryButton("表現檢討")}</li>
           <li>如果申請人喺之後 60 日內交 OP／TOP 申請，法律<strong>當建築事務監督喺第 60 日先收到申請</strong></li>
           <li><strong>由呢個當作收到申請嘅日子起計 14 日</strong></li>
         </ol>
@@ -1067,7 +1113,7 @@ function renderOccupationGuide() {
     </div>
     <p class="occupation-result"><strong>14 日屆滿會點？</strong> 如果建築事務監督未向樓宇業主送達寫明理由嘅書面拒絕通知，許可證就視為已批。</p>
     <p>例如建築事務監督收到表現檢討後，申請人喺第 20 日交表。法律仍然由第 60 日先開始計嗰 14 日。</p>
-    <p class="occupation-refusal"><strong>表現檢討同拒發有咩關係？</strong> 當局可以按${renderProvisionText("第 (6)(f) 段", "§21")}睇報告有冇交代同證明兩樣嘢：施工檢查同監測夠唔夠、岩土設計假設仲成唔成立。交代或理據不足，可以拒發。</p>
+    <p class="occupation-refusal"><strong>${renderGlossaryButton("表現檢討")}同拒發有咩關係？</strong> 當局可以按${renderProvisionText("第 (6)(f) 段", "§21")}睇報告有冇交代同證明兩樣嘢：施工檢查同監測夠唔夠、${renderGlossaryButton("岩土設計假設")}仲成唔成立。交代或理據不足，可以拒發。</p>
     <div class="occupation-links" aria-label="跳到相關款項">
       <button type="button" class="source-chip" data-occupation-jump="(6)">睇 (6) 拒發理由</button>
       <button type="button" class="source-chip" data-occupation-jump="(7)">睇 (7) 14 日規則</button>
@@ -1103,7 +1149,7 @@ function expandClause(clause, open = false) {
       <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
       ${renderPrincipleButton(root)}
     </div>
-    <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">專業詞</li></ul>
+    <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">撳專有名詞睇解釋</li></ul>
     ${renderProvisionTree(details, headings, root)}</details>`;
 }
 
@@ -1173,6 +1219,10 @@ window.addEventListener("storage", event => {
 page.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
+  if (button.dataset.boTerm) {
+    openGlossaryDefinition(button);
+    return;
+  }
   if (button.dataset.principleSection) {
     openProvisionPrinciple(button);
     return;
@@ -1236,7 +1286,7 @@ page.addEventListener("click", event => {
     ? "答啱。"
     : `正確做法係「${boText(choices[correctIndex])}」。`;
   const answer = card.querySelector(".answer");
-  answer.innerHTML = `<p><strong>BD 面試答法</strong>　${boText(officer)}</p><p><strong>對市民點講</strong>　${boText(publicAnswer)}</p>`;
+  answer.innerHTML = `<p><strong>BD 面試答法</strong>　${renderProvisionText(officer)}</p><p><strong>對市民點講</strong>　${renderProvisionText(publicAnswer)}</p>`;
   answer.hidden = false;
 });
 
