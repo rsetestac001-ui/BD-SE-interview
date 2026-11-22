@@ -226,7 +226,7 @@ function renderBoFlowchart() {
         <p><strong>由立法目的落到工程流程：</strong>正因為法例要由源頭守住樓宇安全，準備做工程時先要核對工程受唔受規管、行邊種法定程序同委任邊類合資格人士；樓宇落成後則靠定期檢驗同執法機制持續把關。</p>
         <p>搵條文時由大到細。例如 <strong>第 123 章 › 第 2 部（樓宇管制） › 第 14 條</strong>。第 1、2、2A 條係第 1 部之前嘅開頭條文。</p>
       </div>
-      <div class="bo-flow-main" role="group" aria-label="擬做工程嘅開工程序">
+      <div class="bo-flow-main" role="group" aria-label="由工程程序到樓宇投入使用後">
         ${node("definition")}${arrow}
         <button type="button" class="workflow-question bo-framework-question" data-bo-flow="choose" aria-haspopup="dialog">核對工程性質後，行邊條程序？</button>
         <ul class="workflow-branches bo-framework-routes">
@@ -240,10 +240,16 @@ function renderBoFlowchart() {
             ${node("exempt")}<p>核對豁免涵蓋嘅工程範圍同仍適用嘅規定。</p>
           </li>
         </ul>
+        <div class="bo-flow-merge" aria-hidden="true"></div>
+        ${arrow}
+        <p class="bo-flow-stage">樓宇落成並投入使用後</p>
+        <div class="bo-flow-transition">
+          ${arrow}
+          <span>如果收到強制驗樓或驗窗法定通知</span>
+        </div>
+        ${node("inspection")}
       </div>
-      <div class="bo-flow-lookup">
-        <h3>已落成樓宇收到強制驗樓／驗窗法定通知</h3>
-        <div class="bo-flow-grid">${node("inspection")}</div>
+      <div class="bo-flow-lookup" role="group" aria-label="按情況查閱條文">
         <h3>工程出事、樓宇／斜坡有危險或收到決定，查邊度？</h3>
         <div class="bo-flow-grid">
           ${["orders", "procedure", "offences", "appeals"].map(node).join("")}

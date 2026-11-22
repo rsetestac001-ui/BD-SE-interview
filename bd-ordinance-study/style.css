@@ -332,6 +332,26 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .workflow-reference summary { cursor: pointer; color: #214572; font-weight: 750; }
 .bo-framework-question { display: block; width: 100%; cursor: pointer; }
 .bo-framework-question:hover { background: #ffedb5; }
+/* Continue the branch rail into the post-occupation stage on narrow screens. */
+.bo-flow-merge { position: relative; height: 14px; }
+.bo-flow-merge::before {
+  content: "";
+  position: absolute;
+  inset: 0 calc(50% - 1px) 0 9px;
+  border: solid #7190ad;
+  border-width: 0 0 2px 2px;
+}
+.bo-flow-stage, .bo-flow-transition {
+  text-align: center;
+}
+.bo-flow-stage {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  font-weight: 750;
+}
+.bo-flow-transition { margin-bottom: 8px; color: #214572; }
 .bo-framework-routes .bo-flow-node { height: auto; }
 .bo-framework-routes .workflow-route p { margin-top: 5px; color: var(--muted); font-size: .81rem; }
 @media (min-width: 650px) {
@@ -360,7 +380,25 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
     height: 14px;
     border-left: 2px solid #7190ad;
   }
-  .bo-framework-routes .workflow-route { padding-top: 16px; }
+  .bo-framework-routes .workflow-route { display: flex; flex-direction: column; padding-top: 16px; }
+  .bo-framework-routes .workflow-route::after {
+    content: "";
+    flex: 1 0 12px;
+    align-self: center;
+    margin-top: 6px;
+    border-left: 2px solid #7190ad;
+  }
+  .bo-flow-merge { height: 12px; }
+  .bo-flow-merge::before {
+    inset: 0 calc((100% - 24px) / 6) auto;
+    border-width: 2px 0 0;
+  }
+  .bo-flow-merge::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 calc(50% - 1px);
+    border-left: 2px solid #7190ad;
+  }
   .bo-framework-routes .workflow-condition { text-align: center; }
   .bo-framework-routes .workflow-condition::before {
     top: 0;
