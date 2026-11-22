@@ -480,7 +480,7 @@ function createReferenceWindow(dialog) {
     const path = trigger.dataset.referenceSourcePath ?? trigger.closest("[data-provision-path]")?.dataset.provisionPath ?? "";
     return { controller, trigger, scrollTop: referenceContent.scrollTop,
       label: section ? boText(section + (path && /^(?:\([\dA-Za-z]+\))+$/.test(path) ? path : "")) : referenceTitle.textContent,
-      section, path, sentence, lead, rest };
+      section, path, sentence };
   }
 
   function restoreOrigin({ trigger, scrollTop }) {
@@ -710,7 +710,8 @@ function openProvision(clause, parent, subsection = "", fromReference = false) {
   const key = linked ? `linked:${parent.dialog.id}:${clause}${subsection}` : clause;
   return openReferenceWindow(key, (window, anchor) => {
     const [, title, english] = boPlainProvisions[clause];
-    const heading = [clause + subsection, title].filter(Boolean).join("｜");
+    const subsectionHeading = subsection && boProvisionHeadings[clause]?.[subsection];
+    const heading = [clause + subsection, subsectionHeading || title].join("｜");
     window.showFrameworkDialog(heading, `${english ? `<p class="bo-provision-source">${escapeText(english)}</p>` : ""}${expandClause(clause, true)}`, "bo", anchor);
   }, parent);
 }
@@ -720,9 +721,9 @@ function openLinkedProvision(reference, parent, trigger) {
   const subsection = reference.slice(clause.length).match(/^(?:\([\dA-Za-z]+\))+/)?.[0];
   const origin = parent.captureOrigin(trigger);
   if (trigger.hasAttribute("data-reference-clause")) {
-    origin.explanation = explainBoReference(origin, reference, clause, subsection);
+    origin.explanation = boReferenceNotes[(origin.section ?? "") + origin.path]?.[reference];
   }
-  const referenceWindow = openProvision(clause, parent, subsection, Boolean(origin.explanation));
+  const referenceWindow = openProvision(clause, parent, subsection, trigger.hasAttribute("data-reference-clause"));
   if (referenceWindow !== parent) referenceWindow.setOrigin(origin);
   if (subsection) referenceWindow.jumpToSubsection(subsection);
 }
@@ -865,42 +866,6 @@ function renderProvisionIndex(framework) {
 }
 
 const provisionEmphasis = new RegExp(String.raw`(?<reference>第\s*\d+[A-Z]*(?:\s*\([\dA-Za-z]+\))*\s*條|附表\s*\d+)|(?<local>第\s*(?:\([\dA-Za-z]+\)\s*)+(?:(?:、|及|或|至|與|和)\s*(?:\([\dA-Za-z]+\)\s*)+)*[款段節])|(?<term>${glossaryTermPattern})|(?<time>(?:\d+(?:\.\d+)?|[一二兩三四五六七八九十百]+)\s*(?:(?:個\s*)?月|日|年|星期|小時)(?:\s*(?:之?內|屆滿|期滿|前|後))?(?![\d年月日]))|(?<rule>唔可以|唔准|唔需要|不得|不准|毋須|無須|無需|必須|要先|須先|須在|須於|須由|須向|須按|須以|須將|要喺|要由|要向|要按|除非|除外|但書|例外)`, "giu");
-
-function explainBoReference({ section, path, lead, rest }, reference, targetSection, targetPath) {
-  const note = boReferenceNotes[(section ?? "") + path]?.[reference];
-  if (note) return note;
-
-  const [, title] = boPlainProvisions[targetSection];
-  const headings = boProvisionHeadings[targetSection];
-  const targetTopic = (targetPath ? headings?.[targetPath] : headings) || title;
-  const topic = `「${typeof targetTopic === "string" ? targetTopic : title}」`;
-  const label = boText(reference);
-  const phrase = lead.split(/[，、﹔：]/).at(-1).trim();
-  const following = rest.split(/[，；。]/)[0];
-  if (/^(?:另有規定|嘅緊急例外|規定嘅例外|有(?:緊急)?例外)/.test(following) ||
-      /(?:除|但須受|但受制於|受制於|受限於)$/.test(phrase)) {
-    return `原句叫你先睇${label}有冇例外或者限制。嗰邊講${topic}，會影響呢句嘅一般做法喺咩情況適用。`;
-  }
-  if (/(?:喺|在)?(?:唔影響|不影響|唔限制|不限制)(?:下列|以下)?$/.test(phrase)) {
-    return `${label}講${topic}。原句特登保留嗰邊嘅效力，所以要一齊睇兩邊規定。`;
-  }
-  if (/^(?:就唔適用|唔適用|不適用)/.test(following) || /^(?:嘅|的).{1,28}(?:唔適用|不適用)/.test(following)) {
-    return `${label}講${topic}。引用佢係為咗指出原句講嘅情況，可以唔跟嗰項規定。`;
-  }
-  if (/^(?:所講|所指|所列|提述|所述|定義|嘅意思)/.test(following)) {
-    return `呢度用${label}去界定原句所講嘅人、事或者要求。對照下面${topic}，就可以查清楚實際指邊樣。`;
-  }
-  if (/^(?:規定|要求)/.test(following) || /(?:須符合|要符合|受限於|符合)$/.test(phrase)) {
-    return `呢句要用到${label}入面關於${topic}嘅要求。下面嗰款交代實際要符合嘅條件或者要做嘅步驟。`;
-  }
-  if (/(?:按|根據|依據|依照|按照|遵照)$/.test(phrase) || /^(?:下|之下)(?:嘅|的)/.test(following)) {
-    return `原句用${label}做依據。${label}講${topic}，下面可以對照原句提到嘅步驟係按邊項權力、要求或者程序做。`;
-  }
-  if (reference.startsWith("Schedule") && /(?:表格|手令|範圍|地區|清單|所列)/.test(lead + rest)) {
-    return `原句引用附表，係為咗指明要用嘅格式或者要查嘅清單。呢個附表講${topic}，細節可以喺下文查到。`;
-  }
-  return `原句將${topic}呢個部分指去${label}。下面會帶你去睇引用嘅規定，方便同上面嗰句對照。`;
-}
 
 function renderReferenceButton(clause, label, section, path) {
   const source = section ? ` data-reference-source-section="${escapeText(section)}"` : "";
