@@ -923,26 +923,70 @@ function renderLocalReference(label, clause, currentPath) {
   return html;
 }
 
-function renderProvisionText(text, clause, path) {
+// Match the event, threshold or consequence as a phrase, so the deciding words stay together.
+const provisionKeyPhrase = new RegExp([
+  String.raw`拆卸或改動完成之日|代辦工程完工嗰日|完工嗰日嘅(?:相關)?業主`,
+  String.raw`(?:由|從)[^。；，、：！？（）()\n]{2,32}?(?:起計|開始計)|(?:拆卸|拆改|改動|工程|勘測|檢驗|修葺)(?:或(?:拆卸|改動|工程|勘測|檢驗|修葺))?(?:完成|完工)(?:之日|嘅日期|嗰日|當日)`,
+  String.raw`(?:(?:收到|收妥|送達|發出|註冊|登記|完工|完成|屆滿)[^。；，、：！？（）()\n]{1,18}?(?:之日|嘅日期|嗰日|當日)|(?:獲|取得|攞到)?(?:佔用許可證|入伙紙)發出嘅日期)`,
+  String.raw`(?:樓齡到 )?\d+(?:\.\d+)?\s*(?:個月|日|年|星期|小時|米|毫米|平方米|度|%)(?:或(?:以上|以下)|或者(?:以上|以下)|之內|內|或以前|或以後|前|後|以上|以下)(?![\d年月日])`,
+  String.raw`(?:書面批准同(?:書面)?(?:開工)?同意|批圖同開工同意|先得到書面批准|得到書面同意|兩個條件都(?:符合|要符合)|有一個條件唔符合|命令已(?:經)?(?:登記|註冊))`,
+  String.raw`(?:視為|當作)(?:已同意開工|已經批准|已(?:獲)?批(?:准)?|已撤銷|已送達|已收到|已撤回|獲准|獲批准|同意開工|收到申請)`,
+  String.raw`(?:送畀|送達|向)[^。；，、：！？（）()\n]{0,17}?(?:業主立案法團|法團|人(?:員)?追收|臨街處所擁有人|臨街處所嘅業主|(?:土地或處所|所在地|嗰度)嘅業主)`,
+  String.raw`(?:冇合理理由|無合理辯解|無合理理由|沒有合理辯解)(?:而)?[^。；，、：！？（）()\n]{0,12}?(?:唔遵從|不遵從|沒有遵從|未有遵從|唔遵令|未有遵守|拒絕)(?:送達佢嘅命令|拆改令|命令|通知)?`,
+  String.raw`(?:可處)?(?:罰款|監禁)\s*(?:第\s*\d+\s*級(?:罰款)?|[$＄]\s*[\d,]+|\d+\s*(?:年|個月|日))|(?:可以|可|須|要)(?:被檢控|撤銷註冊|暫停註冊|取消註冊|拒絕同意開工|拒發(?:許可證|入伙紙)|暫緩強制執行|提出上訴|登記命令|追收費用|追討費用|代辦拆改|代拆或代改)`,
+  String.raw`(?:毋須|唔需要|不需要|不用|必須|唔可以|不准|不得|要先|須先)(?:先)?(?:攞|獲得|取得|提交|交|委任|發出|開工|動工|施工|進入|佔用|拆卸|開始|舉行|通知|得到)[^。；，、：！？（）()\n]{1,22}(?=[。；，、：！？（）()\n]|$)`,
+  String.raw`按需要委出紀律委員會|最少一個轉介門檻|向原訟法庭法官提出上訴|用書面命令加條件或要求|喺警員在場下破門|發書面命令|發書面停工令|向區域法院申請優先拆卸令|向裁判官申請手令|經宣誓嘅證供|樓高三層或以下|唔受第 2A 部規管`,
+  String.raw`由行政長官委出|以書面寫明|轉介紀律委員會|提名合資格人士|在場監督|監督工程|核證工程|按監工計劃|有關日期之後|生效日期前|生效日期後|過渡期內|以掛號郵遞|用掛號郵遞|親身送達|張貼喺|視為指明文件|先製作紀錄|銷毀或者處置原來嗰份文件|提供公眾查閱|可供任何人|繳交訂明費用|核證為真確|可接納為證據|先開初步聆訊|撤銷、確認或更改|轉呈上訴法庭|獲豁免受呢條例條文所規限|改變或豁免|指定期內|限期內驗|完成嘅最後日期`,
+  String.raw`連住另一處土地或處所|有佔用或使用嗰幢樓宇或嗰項工程|連住某處所|違反《建築物條例》起成|未經(?:建築事務監督)?(?:批准或同意|批准及同意)|冇以書面拒絕兼列明理由|冇合理理由而唔遵從命令|只由一名業主|只向該業主送達|要暫緩強制執行|喺上訴未完結時強制執行|要先送達通知畀上訴人`,
+  String.raw`要喺 Gazette（憲報）公布|要按下列各段委任專業人士|委任 Authorized Person（認可人士，AP）統籌工程|批准同開工同意下展開或進行|冇按要求委任|要跟嗰項工程嘅 Simplified Requirements（簡化規定）|監督呢項小型工程|(?:要)?由局長委任|審查申請人的資格|(?:一般建築|專門|小型工程)承建商名冊|可不時委出紀律委員會`,
+  String.raw`當作 Building Authority（建築事務監督）已同意開工|施工或開工會同現有或擬建污水隧道工程有衝突|違反《建築物條例》|對生命或財產構成迫切危險|構成危險或可變得危險|位於附表所列地區的第2號地區|伸出地盤界線|已根據呢一條畀同意|監督訂明修葺|進行訂明檢驗|進行嗰項訂明檢驗|監督嗰項訂明修葺|要確保修葺涉及嘅樓宇部分已經變返安全`,
+  String.raw`業主要按命令標示門牌|追收白行一趟嘅費用|可以處置嗰啲工程所產生嘅任何物料|親手交畀收件人|用掛號信|貼喺嗰度嘅顯眼位置|製作任何指明文件的紀錄|指明文件紀錄視為製作該指明文件紀錄所據的有關指明文件|可核證指明文件|可獲接納為證據|真誠執行條例|局長可就以下事項訂立規例|唔需要Supervision Plan（監工計劃書）|批准變通原本嘅條例要求|批豁免唔可以削弱規例訂立嘅結構穩定或公眾衞生標準`,
+  String.raw`根據第47條發出的上訴通知|行政長官要委任以下人士|一名主席及最少2名成員組成|過半數成員的意見作裁定|主席可投決定票|就訟費作出其認為適合的命令|可追討訟費|出席並作出申述|由大律師或律師代表|進入並檢查|特權及豁免權|主席可就個別聆訊決定|開始實施\*嘅日期|將佢列入名冊|申請仍未處理完|仍繼續實施|根據經宣誓而作的證供|編號(?:GCB1|GS-SP/714-1)圖則|屬訂明類型的招牌`,
+].join("|"), "gu");
+
+function renderProvisionText(text, clause, path, highlightKeyPhrases = false) {
   const value = boText(text);
-  let html = "";
+  const tokens = [...value.matchAll(provisionEmphasis)];
+  let tokenIndex = 0;
   let offset = 0;
-  for (const match of value.matchAll(provisionEmphasis)) {
-    const kind = match.groups.time ? "time" : "rule";
-    html += escapeText(value.slice(offset, match.index));
-    if (match.groups.reference || match.groups.local) {
-      const prefix = value.slice(0, match.index);
-      if (!isBuildingsOrdinanceReference(prefix)) html += escapeText(match[0]);
-      else if (match.groups.local) html += renderLocalReference(match[0], clause, path);
-      else html += renderInlineReference(match[0], clause, path);
-    } else if (match.groups.term) {
-      html += renderGlossaryButton(match[0]);
-    } else {
-      html += `<mark class="provision-mark provision-mark--${kind}">${escapeText(match[0])}</mark>`;
+
+  function renderThrough(end, isKeyPhrase = false) {
+    let html = "";
+    while (tokens[tokenIndex]?.index < end) {
+      const match = tokens[tokenIndex++];
+      html += escapeText(value.slice(offset, match.index));
+      if (match.groups.reference || match.groups.local) {
+        const prefix = value.slice(0, match.index);
+        if (!isBuildingsOrdinanceReference(prefix)) html += escapeText(match[0]);
+        else if (match.groups.local) html += renderLocalReference(match[0], clause, path);
+        else html += renderInlineReference(match[0], clause, path);
+      } else if (match.groups.term) {
+        html += renderGlossaryButton(match[0]);
+      } else if (isKeyPhrase) {
+        html += escapeText(match[0]);
+      } else {
+        const kind = match.groups.time ? "time" : "rule";
+        html += `<mark class="provision-mark provision-mark--${kind}">${escapeText(match[0])}</mark>`;
+      }
+      offset = match.index + match[0].length;
     }
-    offset = match.index + match[0].length;
+    html += escapeText(value.slice(offset, end));
+    offset = end;
+    return html;
   }
-  return html + escapeText(value.slice(offset));
+
+  let html = "";
+  if (highlightKeyPhrases) {
+    const cutsToken = position => tokens.some(token =>
+      token.index < position && position < token.index + token[0].length);
+    const phrases = [...value.matchAll(provisionKeyPhrase)].filter(match =>
+      !cutsToken(match.index) && !cutsToken(match.index + match[0].length));
+    for (const match of phrases.slice(0, 2)) {
+      html += renderThrough(match.index);
+      html += `<mark class="provision-mark provision-mark--key">${renderThrough(match.index + match[0].length, true)}</mark>`;
+    }
+  }
+  return html + renderThrough(value.length);
 }
 
 function renderGlossaryButton(label) {
@@ -1042,7 +1086,7 @@ function renderProvisionTree(entries, headings, section) {
     if (!item.items) {
       const paragraphs = item.text.split("\n").flatMap(paragraph =>
         paragraph.length > 140 ? paragraph.split(/(?<=[。；])(?=\S)/u) : [paragraph]);
-      return `<li class="provision-copy">${item.description ? `<strong>${renderProvisionText(item.description, section, parentPath)}</strong>` : ""}${paragraphs.map(paragraph => `<p>${renderProvisionText(paragraph, section, parentPath)}</p>`).join("")}</li>`;
+      return `<li class="provision-copy">${item.description ? `<strong>${renderProvisionText(item.description, section, parentPath)}</strong>` : ""}${paragraphs.map(paragraph => `<p>${renderProvisionText(paragraph, section, parentPath, true)}</p>`).join("")}</li>`;
     }
     const isSubsection = depth === 0 && /^\(\d/.test(item.number);
     const label = isSubsection ? `第 ${item.number} 款` : item.number;
@@ -1120,7 +1164,7 @@ function expandClause(clause, open = false) {
       <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
       ${renderPrincipleButton(root)}
     </div>
-    <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">撳專有名詞睇解釋</li></ul>
+    <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--key">條文重點</li><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">撳專有名詞睇解釋</li></ul>
     ${renderProvisionTree(details, headings, root)}</details>`;
 }
 
