@@ -721,7 +721,7 @@ function openProvision(clause, parent, subsection = "", fromReference = false) {
   return openReferenceWindow(key, (window, anchor) => {
     const [, title, english] = boPlainProvisions[clause];
     const subsectionHeading = subsection && boProvisionHeadings[clause]?.[subsection];
-    const heading = [clause + subsection, subsectionHeading || title].join("｜");
+    const heading = [clause + subsection, subsectionHeading ? glossaryLabels(subsectionHeading) : title].join("｜");
     window.showFrameworkDialog(heading, `${english ? `<p class="bo-provision-source">${escapeText(english)}</p>` : ""}${expandClause(clause, true)}`, "bo", anchor);
   }, parent);
 }
@@ -810,17 +810,17 @@ function openProvisionFlow(keys, parent, trigger, clause) {
 function provisionFlowButton(path, label, note, section, clause, terminal = false) {
   return `<button type="button" class="provision-chart-node${terminal ? " is-terminal" : ""}" data-provision-flow-path="${escapeText(path)}"${section ? ` data-provision-flow-section="${escapeText(section)}"` : ""}>
     <span>${escapeText(section ? boText(section + path) : path || boText(clause))}</span>
-    <strong>${escapeText(plainStudyText(label))}</strong>${note ? `<small>${escapeText(plainStudyText(note))}</small>` : ""}
+    <strong>${escapeText(glossaryLabels(plainStudyText(label)))}</strong>${note ? `<small>${escapeText(glossaryLabels(plainStudyText(note)))}</small>` : ""}
   </button>`;
 }
 
 function renderWorkflow(sequence, clause) {
   return `<ol class="workflow-sequence">${sequence.map(({ label, path, section, note, terminal, branches }) => `
     <li class="workflow-entry">${branches ? `
-      <div class="workflow-question">${escapeText(plainStudyText(label))}</div>
+      <div class="workflow-question">${escapeText(glossaryLabels(plainStudyText(label)))}</div>
       <ul class="workflow-branches">${branches.map(branch => `
         <li class="workflow-route">
-          <strong class="workflow-condition">${escapeText(branch.label)}</strong>
+          <strong class="workflow-condition">${escapeText(glossaryLabels(branch.label))}</strong>
           ${renderWorkflow(branch.steps, clause)}
         </li>`).join("")}</ul>`
       : provisionFlowButton(path, label, note, section, clause, terminal)}
@@ -958,6 +958,7 @@ const provisionKeyPhrase = new RegExp([
 function renderProvisionText(text, clause, path, highlightKeyPhrases = false) {
   const value = boText(text);
   const tokens = [...value.matchAll(provisionEmphasis)];
+  const seenTerms = new Set();
   let tokenIndex = 0;
   let offset = 0;
 
@@ -972,7 +973,7 @@ function renderProvisionText(text, clause, path, highlightKeyPhrases = false) {
         else if (match.groups.local) html += renderLocalReference(match[0], clause, path);
         else html += renderInlineReference(match[0], clause, path);
       } else if (match.groups.term) {
-        html += renderGlossaryButton(match[0]);
+        html += renderGlossaryButton(match[0], seenTerms, value.slice(match.index + match[0].length));
       } else if (isKeyPhrase) {
         html += escapeText(match[0]);
       } else {
@@ -1000,10 +1001,35 @@ function renderProvisionText(text, clause, path, highlightKeyPhrases = false) {
   return html + renderThrough(value.length);
 }
 
-function renderGlossaryButton(label) {
+function glossaryDisplayLabel(label, entry, seenTerms, following) {
+  const [english] = entry;
+  const seen = seenTerms.has(entry);
+  seenTerms.add(entry);
+  if (seen || /^[a-z]/i.test(label)) return label;
+
+  // Keep bilingual copy that already spells the term out in either order.
+  const parenthesis = following.match(/^\s*[（(]([^()（）\n]*)[）)]/u);
+  const suppliedEnglish = parenthesis?.[1].split(/[，,、]/u)[0].trim();
+  if (suppliedEnglish && /^[a-z]/i.test(suppliedEnglish) && glossaryEntry(suppliedEnglish) === entry) return label;
+  return `${label}（${english}）`;
+}
+
+function renderGlossaryButton(label, seenTerms = new Set(), following = "") {
   const entry = glossaryEntry(label);
   if (!entry) return escapeText(label);
-  return `<button type="button" class="provision-mark provision-mark--term glossary-term" data-bo-term="${escapeText(entry[0])}" aria-haspopup="dialog">${escapeText(label)}</button>`;
+  const display = glossaryDisplayLabel(label, entry, seenTerms, following);
+  return `<button type="button" class="provision-mark provision-mark--term glossary-term" data-bo-term="${escapeText(entry[0])}" aria-haspopup="dialog">${escapeText(display)}</button>`;
+}
+
+// Existing chart controls and dialog headings need plain text to keep a single interactive element.
+const glossaryTextPattern = new RegExp(glossaryTermPattern, "giu");
+
+function glossaryLabels(text) {
+  const seenTerms = new Set();
+  return text.replace(glossaryTextPattern, (label, offset) => {
+    const entry = glossaryEntry(label);
+    return entry ? glossaryDisplayLabel(label, entry, seenTerms, text.slice(offset + label.length)) : label;
+  });
 }
 
 function openGlossaryDefinition(trigger, parent) {
@@ -1366,7 +1392,7 @@ function renderFlowClauses(clauses) {
   return flowClauseGroups(clauses).map(([location, articles]) => {
     const rows = articles.map(clause => {
       const [label, meaning = boFlowClauseNotes[clause]] = boFlowClauseLabels[clause] ?? boHighlights[clause];
-      return `<div><dt><span>${boText(clause)}</span> ${label}</dt><dd>${renderProvisionText(meaning, clause.split("(")[0])}${expandClause(clause)}</dd></div>`;
+      return `<div><dt><span>${boText(clause)}</span> ${renderProvisionText(label, clause.split("(")[0])}</dt><dd>${renderProvisionText(meaning, clause.split("(")[0])}${expandClause(clause)}</dd></div>`;
     }).join("");
     return `<section class="bo-flow-clause-group"><h3>${boText(location)}</h3><dl class="bo-clause-breakdown">${rows}</dl></section>`;
   }).join("");
@@ -1469,7 +1495,7 @@ page.addEventListener("click", event => {
     const clause = button.dataset.frameworkClause;
     const [label, meaning] = boHighlights[clause];
     const [part] = courses.bo.framework.rows.find(([, , clauses]) => clauses.includes(clause));
-    showFrameworkDialog(`framework-highlight:${clause}`, `${clause}｜${label}`, `<section class="reference-item"><p class="detail-label">${boText(part)}</p><p>${renderProvisionText(meaning, clause.split("(")[0])}</p>${expandClause(clause)}</section>`);
+    showFrameworkDialog(`framework-highlight:${clause}`, `${clause}｜${glossaryLabels(label)}`, `<section class="reference-item"><p class="detail-label">${boText(part)}</p><p>${renderProvisionText(meaning, clause.split("(")[0])}</p>${expandClause(clause)}</section>`);
     return;
   }
   if (button.dataset.frameworkRow !== undefined) {
