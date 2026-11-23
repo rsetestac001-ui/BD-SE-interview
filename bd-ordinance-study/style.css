@@ -34,6 +34,13 @@ dialog{color:var(--ink);max-width:550px;width:calc(100% - 30px);max-height:min(7
 .bo-flow-lookup h3{margin:20px 0 8px;border-top:1px solid var(--line);padding-top:15px;font-size:15px}
 .bo-flow-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .bo-flow-grid .bo-flow-node{background:#fbfdf9}
+.bo-comparison-grid .bo-comparison-node{display:flex;flex-direction:column;background:#f4f8fc;border-color:#b5cde4}
+.bo-comparison-grid .bo-comparison-node:hover{background:#e7f0fa;border-color:#4f7ba8}
+.bo-comparison-grid .bo-comparison-node strong{color:#1b3e66}
+.bo-comparison-summary{display:block;margin-top:4px;font-size:12px;line-height:1.45;color:var(--muted)}
+.comparison-switch-row{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.comparison-switch-button{padding:6px 10px;border:1px solid #b5cde4;border-radius:8px;background:#eaf2fb;color:#1b3e66;font-size:.84rem;font-weight:750;text-align:left;line-height:1.35}
+.comparison-switch-button:hover{background:#dce9f8;border-color:#4f7ba8}
 @media(max-width:400px){.bo-flow-node{padding-inline:6px}.bo-flow-node strong{font-size:13px}}
 .bo-clause-breakdown{display:grid;gap:9px;margin:0}
 .bo-clause-breakdown>div{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#f6faf5}
@@ -762,9 +769,14 @@ dialog.has-reference-connection { --nested-dialog-max-height: min(82dvh, 680px);
     min-height: 30px;
     font-size: var(--mobile-label-size);
   }
-  .provision-news .news-meta, .news-date, .news-tag, .news-card .news-provisions {
+  .provision-news .news-meta, .news-date, .news-tag, .news-card .news-provisions, .bo-comparison-summary {
     font-size: var(--mobile-label-size);
   }
+  .comparison-switch-button {
+    min-height: 36px;
+    font-size: var(--mobile-control-size);
+  }
+  .bo-comparison-grid { grid-template-columns: minmax(0, 1fr); }
   .reference-origin { padding-inline: 14px; }
   .reference-origin p { font-size: var(--mobile-control-size); }
   .reference-connection h3, .reference-origin .reference-connection p {
