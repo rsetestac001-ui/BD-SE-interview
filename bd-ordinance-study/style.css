@@ -257,6 +257,16 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
 .dialog-head .dialog-flow-button { background: #e7f0fb; border-color: #b8cfe8; color: #214572; }
 .dialog-head .dialog-flow-button:hover { background: #d9e8fa; }
 .provision-chart { margin: 12px 0; }
+.provision-key-comparison {
+  margin: 0 0 .8rem;
+  padding: .6rem .75rem;
+  border-inline-start: 3px solid #6b4b8f;
+  background: #f1eafa;
+  color: #321b4d;
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.6;
+}
 .provision-chart-intro { color: var(--muted); font-size: .9rem; }
 .provision-chart-group { margin-top: 14px; padding: 12px; border: 1px solid #c9dbef; border-radius: 10px; background: #f2f7fd; }
 .provision-chart-group h3 { margin-bottom: 8px; color: #214572; font-size: 1rem; }
