@@ -520,7 +520,7 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   flex-wrap: wrap;
   gap: 8px;
 }
-.principle-button {
+.principle-button, .english-button {
   height: 18px;
   padding: 0 6px;
   border: 1px solid #b8cfe8;
@@ -532,10 +532,16 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   white-space: nowrap;
 }
 .principle-button:hover { background: #d9e8fa; }
-.principle-button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.english-button {
+  border-color: #b7d3c4;
+  background: #ebf5ef;
+  color: #174d3a;
+}
+.english-button:hover { background: #dceee3; }
+.principle-button:focus-visible, .english-button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 @media (any-pointer: coarse) {
-  .principle-button { position: relative; }
-  .principle-button::after {
+  .principle-button, .english-button { position: relative; }
+  .principle-button::after, .english-button::after {
     content: "";
     position: absolute;
     inset: -4px 0;
@@ -547,6 +553,41 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   overflow-wrap: anywhere;
 }
 .provision-principle .principle-context { color: var(--muted); font-size: .85rem; }
+.provision-english .english-meta {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: .85rem;
+  line-height: 1.5;
+}
+.provision-english .english-meta strong { color: var(--ink); }
+.english-tree, .english-tree ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.english-tree {
+  margin: 0 0 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faf8;
+  overflow-wrap: anywhere;
+}
+.english-branch + .english-branch { margin-top: 8px; }
+.english-branch > ol { padding-inline-start: 14px; }
+.english-tree > .english-branch[data-depth="0"] > ol { padding-inline-start: 10px; }
+.english-marker {
+  font-weight: 750;
+  color: var(--green);
+  font-size: .86rem;
+  margin-bottom: 2px;
+}
+.english-copy p {
+  margin: 0 0 6px;
+  line-height: 1.65;
+  color: var(--ink);
+}
+.english-copy:last-child p:last-child { margin-bottom: 0; }
 
 .reference-connection {
   margin-top: 7px;
@@ -655,7 +696,7 @@ dialog.has-reference-connection { --nested-dialog-max-height: min(82dvh, 680px);
     overflow-wrap: anywhere;
   }
   .provision-copy > strong { font-size: inherit; }
-  .principle-button {
+  .principle-button, .english-button {
     height: auto;
     min-height: 30px;
     font-size: var(--mobile-label-size);

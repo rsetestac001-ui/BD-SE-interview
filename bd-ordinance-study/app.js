@@ -665,6 +665,11 @@ function createReferenceWindow(dialog) {
       openProvisionPrinciple(principle, controller);
       return;
     }
+    const english = event.target.closest("[data-english-section]");
+    if (english) {
+      openProvisionEnglish(english, controller);
+      return;
+    }
     const cross = event.target.closest("[data-reference-clause]");
     if (cross) {
       openLinkedProvision(cross.dataset.referenceClause, controller, cross);
@@ -1019,6 +1024,110 @@ function renderPrincipleButton(section, path = "") {
   return `<button type="button" class="principle-button" aria-haspopup="dialog" data-principle-section="${escapeText(section)}" data-principle-path="${escapeText(path)}">背後原理</button>`;
 }
 
+function renderEnglishButton(section, path = "") {
+  return `<button type="button" class="english-button" aria-haspopup="dialog" data-english-section="${escapeText(section)}" data-english-path="${escapeText(path)}">英文原文</button>`;
+}
+
+function splitProvisionPath(label) {
+  const [number, qualifier = ""] = label.split("｜");
+  const [prefix] = number.match(/^(?:\([\dA-Za-z]+\))*/);
+  const tail = number.slice(prefix.length).trim();
+  const parts = prefix.match(/\([\dA-Za-z]+\)/g) ?? [];
+  if (/^-\([\dA-Za-z]+\)$/.test(tail)) {
+    parts[parts.length - 1] += ` 至 ${tail.slice(1)}`;
+  } else {
+    const group = tail || (["續文", "但書"].includes(qualifier) ? "" : qualifier);
+    if (group) {
+      const markers = group.match(/(?:\([\dA-Za-z]+\))+$/)?.[0] ?? "";
+      parts.push(group.slice(0, group.length - markers.length).trim(), ...(markers.match(/\([\dA-Za-z]+\)/g) ?? []));
+    }
+  }
+  return parts;
+}
+
+function formatEnglishMarker(part) {
+  const oldSec = part.match(/^舊例第\s*(\d+[A-Za-z]*)\s*條$/);
+  if (oldSec) return `Section ${oldSec[1]}`;
+  const col = part.match(/^表\s*([AB])\s*欄第\s*(\d+[A-Za-z]*)\s*項$/);
+  if (col) return `Column ${col[1]}, Item ${col[2]}`;
+  const row = part.match(/^表第\s*(\d+)\s*行$/);
+  if (row) return `Row ${row[1]}`;
+  if (part.includes("（")) return part.split("（", 1)[0].trim();
+  return part.replace(" 至 ", "–");
+}
+
+function englishRowMatchesPath(label, targetPath) {
+  if (!targetPath) return true;
+  const parts = splitProvisionPath(label);
+  let acc = "";
+  for (const part of parts) {
+    acc += part;
+    if (acc === targetPath) return true;
+  }
+  return false;
+}
+
+function renderEnglishTree(rows, targetPath) {
+  const targetDepth = targetPath ? splitProvisionPath(targetPath).length : 0;
+  const root = { items: [], children: new Map() };
+  for (const [label, text] of rows) {
+    const parts = splitProvisionPath(label);
+    const displayParts = targetDepth > 1 ? parts.slice(targetDepth - 1) : parts;
+    let node = root;
+    for (const part of displayParts) {
+      if (!node.children.has(part)) {
+        const child = { part, items: [], children: new Map() };
+        node.children.set(part, child);
+        node.items.push(child);
+      }
+      node = node.children.get(part);
+    }
+    node.items.push({ text });
+  }
+  const renderItems = (items, depth) => items.map(item => {
+    if (!item.items) {
+      return `<li class="english-copy"><p>${escapeText(item.text)}</p></li>`;
+    }
+    const marker = formatEnglishMarker(item.part);
+    const hideDuplicateDefLabel = item.items.length > 0 && !item.items[0].items &&
+      item.items[0].text.toLowerCase().startsWith(marker.toLowerCase());
+    const markerHtml = marker && !hideDuplicateDefLabel
+      ? `<div class="english-marker">${escapeText(marker)}</div>` : "";
+    return `<li class="english-branch" data-depth="${depth}">${markerHtml}<ol role="list">${renderItems(item.items, depth + 1)}</ol></li>`;
+  }).join("");
+  return `<ol class="english-tree" role="list" lang="en">${renderItems(root.items, 0)}</ol>`;
+}
+
+function openProvisionEnglish(trigger, parent) {
+  const { englishSection: section, englishPath: path } = trigger.dataset;
+  const [, , , anchor] = boPlainProvisions[section];
+  const [enTitle = "", rows = []] = boEnglishProvisions[section] ?? [];
+  const matched = rows.filter(([label]) => englishRowMatchesPath(label, path));
+  const provisionLabel = describePrincipleTarget(section, path);
+  const enSectionTitle = section.replace(/^§(.+)$/, "Section $1");
+  const enSource = `${references.bo[2]}!en?xpid=${encodeURIComponent(anchor)}`;
+  const headingLine = enTitle ? `${enSectionTitle} — ${enTitle}` : enSectionTitle;
+  const content = matched.length
+    ? renderEnglishTree(matched, path)
+    : '<p class="principle-context" lang="en">English statutory text is unavailable for this item. Please open the official HKeL page below.</p>';
+  const body = `<div class="reference-item provision-english">
+    <p class="english-meta" lang="en"><strong>${escapeText(headingLine)}</strong> · Cap. 123 (Version ${escapeText(boEnglishVersion)})</p>
+    ${content}
+    <a href="${enSource}" target="_blank" rel="noopener noreferrer">喺電子法例睇英文官方原文 ↗</a>
+  </div>`;
+  const origin = parent?.captureOrigin(trigger, false);
+  if (origin) origin.label = provisionLabel;
+  const key = `english:${parent?.dialog.id ?? "page"}:${section}:${path}`;
+  openReferenceWindow(key, (window, anchorWindow) => {
+    window.showFrameworkDialog(`${provisionLabel}｜英文原文`, body, null, anchorWindow);
+    window.setOrigin(origin);
+    window.dialog.addEventListener("keydown", event => {
+      if (event.key === "Escape") window.dialog.close();
+    });
+    if (!origin) window.dialog.addEventListener("close", () => trigger.focus({ preventScroll: true }), { once: true });
+  }, parent);
+}
+
 function describePrincipleTarget(section, path) {
   const article = section.replace(/^§(.+)$/, "第 $1 條").replace(/^Schedule (\d+)$/, "附表 $1");
   return [article, path].filter(Boolean).join(" ");
@@ -1097,7 +1206,7 @@ function renderProvisionTree(entries, headings, section) {
     const heading = isSubsection ? headings?.[item.number.replace(" 至 ", "-")] : "";
     const path = parentPath + item.number;
     const number = `<div class="provision-number">${escapeText(label)}</div>`;
-    const caption = `<div class="provision-caption">${number}${isSubsection ? renderFavoriteButton(section, path) : ""}${renderPrincipleButton(section, path)}</div>`;
+    const caption = `<div class="provision-caption">${number}${isSubsection ? renderFavoriteButton(section, path) : ""}${renderPrincipleButton(section, path)}${renderEnglishButton(section, path)}</div>`;
     return `<li class="provision-branch" data-provision-path="${escapeText(path)}">${caption}${heading ? renderProvisionHeading(heading, section, path) : ""}<ol role="list">${renderItems(item.items, depth + 1, path)}</ol></li>`;
   }).join("");
   const introduction = typeof headings === "string"
@@ -1166,7 +1275,7 @@ function expandClause(clause, open = false) {
   return `${clause === "§21" ? renderOccupationGuide() : ""}<details class="clause-more" data-quiz-provision="${escapeText(root)}"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
     <div class="provision-section-actions">
       <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
-      ${renderPrincipleButton(root)}
+      ${renderPrincipleButton(root)}${renderEnglishButton(root)}
     </div>
     <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--key">條文重點</li><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">撳專有名詞睇解釋</li></ul>
     ${renderProvisionTree(details, headings, root)}</details>`;
