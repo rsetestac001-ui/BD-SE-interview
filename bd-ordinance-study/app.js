@@ -670,6 +670,11 @@ function createReferenceWindow(dialog) {
       openProvisionEnglish(english, controller);
       return;
     }
+    const news = event.target.closest("[data-news-section]");
+    if (news) {
+      openProvisionNews(news, controller);
+      return;
+    }
     const cross = event.target.closest("[data-reference-clause]");
     if (cross) {
       openLinkedProvision(cross.dataset.referenceClause, controller, cross);
@@ -1028,6 +1033,82 @@ function renderEnglishButton(section, path = "") {
   return `<button type="button" class="english-button" aria-haspopup="dialog" data-english-section="${escapeText(section)}" data-english-path="${escapeText(path)}">英文原文</button>`;
 }
 
+let newsBySectionCache;
+
+function newsMatchesTarget(ref, section, path = "") {
+  const match = ref.match(/^(§\d+[A-Z]*|Schedule \d+)(.*)$/);
+  if (!match || match[1] !== section) return false;
+  if (!path) return true;
+  const refPath = match[2];
+  return refPath === path || refPath.startsWith(`${path}(`);
+}
+
+function getProvisionNews(section, path = "") {
+  if (typeof boNewsItems === "undefined") return [];
+  if (!newsBySectionCache) {
+    newsBySectionCache = new Map();
+    const sorted = Object.values(boNewsItems).sort((a, b) => b[0].localeCompare(a[0]));
+    for (const item of sorted) {
+      const sections = new Set(item[5].map(ref => ref.match(/^(§\d+[A-Z]*|Schedule \d+)/)?.[1]).filter(Boolean));
+      for (const root of sections) {
+        if (!newsBySectionCache.has(root)) newsBySectionCache.set(root, []);
+        newsBySectionCache.get(root).push(item);
+      }
+    }
+  }
+  const candidates = newsBySectionCache.get(section);
+  if (!candidates) return [];
+  if (!path) return candidates;
+  return candidates.filter(item => item[5].some(ref => newsMatchesTarget(ref, section, path)));
+}
+
+function renderNewsButton(section, path = "") {
+  const items = getProvisionNews(section, path);
+  if (!items.length) return "";
+  const label = describePrincipleTarget(section, path);
+  return `<button type="button" class="news-button" aria-haspopup="dialog" data-news-section="${escapeText(section)}" data-news-path="${escapeText(path)}" aria-label="${escapeText(label)}相關新聞（共 ${items.length} 則）">新聞</button>`;
+}
+
+function formatNewsProvisionRef(ref) {
+  return ref.replace(/^§(.+)$/, "第 $1 條").replace(/^Schedule (\d+)$/, "附表 $1");
+}
+
+function openProvisionNews(trigger, parent) {
+  const { newsSection: section, newsPath: path } = trigger.dataset;
+  const items = getProvisionNews(section, path);
+  const provisionLabel = describePrincipleTarget(section, path);
+  const cards = items.map(([date, tag, title, summary, url, provisions]) => {
+    const cited = provisions.map(formatNewsProvisionRef).join("、");
+    const paragraphs = summary.split("\n").map(paragraph => `<p>${renderProvisionText(paragraph, section, path)}</p>`).join("");
+    return `<article class="news-card">
+      <div class="news-card-head">
+        <time class="news-date" datetime="${escapeText(date)}">${escapeText(date)}</time>
+        ${tag ? `<span class="news-tag">${escapeText(tag)}</span>` : ""}
+      </div>
+      <h3>${escapeText(title)}</h3>
+      ${paragraphs}
+      <p class="news-provisions">相關條文：${renderProvisionText(cited, section, path)}</p>
+      <a href="${escapeText(url)}" target="_blank" rel="noopener noreferrer">睇屋宇署新聞公報原文 ↗</a>
+    </article>`;
+  }).join("");
+  const body = `<div class="reference-item provision-news">
+    <p class="news-meta">屋宇署新聞公報（涵蓋多個年份）· 共 ${items.length} 則相關新聞</p>
+    <div class="news-list">${cards}</div>
+    <p class="news-archive-link"><a href="https://www.bd.gov.hk/tc/whats-new/press-releases/index.html" target="_blank" rel="noopener noreferrer">瀏覽屋宇署全部新聞公報 ↗</a></p>
+  </div>`;
+  const origin = parent?.captureOrigin(trigger, false);
+  if (origin) origin.label = provisionLabel;
+  const key = `news:${parent?.dialog.id ?? "page"}:${section}:${path}`;
+  openReferenceWindow(key, (window, anchorWindow) => {
+    window.showFrameworkDialog(`${provisionLabel}｜新聞`, body, null, anchorWindow);
+    window.setOrigin(origin);
+    window.dialog.addEventListener("keydown", event => {
+      if (event.key === "Escape") window.dialog.close();
+    });
+    if (!origin) window.dialog.addEventListener("close", () => trigger.focus({ preventScroll: true }), { once: true });
+  }, parent);
+}
+
 function splitProvisionPath(label) {
   const [number, qualifier = ""] = label.split("｜");
   const [prefix] = number.match(/^(?:\([\dA-Za-z]+\))*/);
@@ -1206,7 +1287,7 @@ function renderProvisionTree(entries, headings, section) {
     const heading = isSubsection ? headings?.[item.number.replace(" 至 ", "-")] : "";
     const path = parentPath + item.number;
     const number = `<div class="provision-number">${escapeText(label)}</div>`;
-    const caption = `<div class="provision-caption">${number}${isSubsection ? renderFavoriteButton(section, path) : ""}${renderPrincipleButton(section, path)}${renderEnglishButton(section, path)}</div>`;
+    const caption = `<div class="provision-caption">${number}${isSubsection ? renderFavoriteButton(section, path) : ""}${renderPrincipleButton(section, path)}${renderEnglishButton(section, path)}${renderNewsButton(section, path)}</div>`;
     return `<li class="provision-branch" data-provision-path="${escapeText(path)}">${caption}${heading ? renderProvisionHeading(heading, section, path) : ""}<ol role="list">${renderItems(item.items, depth + 1, path)}</ol></li>`;
   }).join("");
   const introduction = typeof headings === "string"
@@ -1275,7 +1356,7 @@ function expandClause(clause, open = false) {
   return `${clause === "§21" ? renderOccupationGuide() : ""}<details class="clause-more" data-quiz-provision="${escapeText(root)}"${open ? " open" : ""}><summary aria-label="詳細解釋 ${escapeText(boText(clause))}"><span class="expand-label">展開</span><span class="collapse-label">收起</span></summary>
     <div class="provision-section-actions">
       <p class="bo-provision-source">${mode} · 法例版本 ${boSourceVersion} · <a href="${source}" target="_blank" rel="noopener noreferrer">睇官方原文 ↗</a></p>
-      ${renderPrincipleButton(root)}${renderEnglishButton(root)}
+      ${renderPrincipleButton(root)}${renderEnglishButton(root)}${renderNewsButton(root)}
     </div>
     <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--key">條文重點</li><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">撳專有名詞睇解釋</li></ul>
     ${renderProvisionTree(details, headings, root)}</details>`;
@@ -1353,6 +1434,14 @@ page.addEventListener("click", event => {
   }
   if (button.dataset.principleSection) {
     openProvisionPrinciple(button);
+    return;
+  }
+  if (button.dataset.englishSection) {
+    openProvisionEnglish(button);
+    return;
+  }
+  if (button.dataset.newsSection) {
+    openProvisionNews(button);
     return;
   }
   if (button.dataset.favoriteOpen) {
