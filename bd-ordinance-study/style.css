@@ -212,6 +212,7 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
+.provision-mark--key { background: #ecddfa; color: #452065; }
 .provision-mark--rule { background: #f8dede; color: #7b252a; }
 .provision-mark--time { background: #f9e9ac; color: #5e4103; }
 .provision-mark--term { background: #e0ebfc; color: #214572; }
