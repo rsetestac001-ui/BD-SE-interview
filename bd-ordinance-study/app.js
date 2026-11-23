@@ -258,6 +258,14 @@ function renderBoFlowchart() {
         <div class="bo-flow-grid">
           ${["opening", "modification", "transitional", "saving", "minorTransition"].map(node).join("")}
         </div>
+        <h3>相似條文點分？（對照流程圖）</h3>
+        <div class="bo-flow-grid bo-comparison-grid">
+          ${Object.entries(boComparisonFlows).map(([key, item]) => `<button type="button" class="bo-flow-node bo-comparison-node" data-bo-comparison="${escapeText(key)}" aria-haspopup="dialog">
+            <strong>⇄ ${escapeText(item.shortTitle)}</strong>
+            <small>${escapeText(boText(item.range))}</small>
+            <span class="bo-comparison-summary">${escapeText(item.summary)}</span>
+          </button>`).join("")}
+        </div>
       </div>
     </div>
   </section>`;
@@ -515,7 +523,7 @@ function createReferenceWindow(dialog) {
     quizState = undefined;
     quizButton.hidden = keys.length === 0;
     flowButton.hidden = keys.length === 0;
-    flowButton.textContent = keys.some(key => boWorkflows[key] || boPartOneSections.includes(key))
+    flowButton.textContent = keys.some(key => boWorkflows[key] || comparisonKeysFor([key]).length)
       ? "Flow chart" : "條文索引";
     quizButton.setAttribute("aria-expanded", "false");
     if (keys.length) {
@@ -759,28 +767,54 @@ function createReferenceWindowFor(key) {
   return referenceWindow;
 }
 
+function comparisonKeysFor(sections) {
+  return Object.entries(boComparisonFlows)
+    .filter(([, item]) => sections.some(key => item.sections.includes(key)))
+    .map(([key]) => key);
+}
+
+function openComparisonFlow(comparisonKey, trigger) {
+  const item = boComparisonFlows[comparisonKey];
+  if (!item) return;
+  openProvisionFlow(item.sections, null, trigger, comparisonKey);
+}
+
 function openProvisionFlow(keys, parent, trigger, clause) {
-  const key = `flow:${parent.dialog.id}:${keys.join(",")}`;
+  const isStandalone = !parent;
+  const key = isStandalone ? `comparison:${clause}` : `flow:${parent.dialog.id}:${keys.join(",")}`;
   const existing = referenceWindows.get(key);
   if (existing?.dialog.open) {
     existing.focus();
     return;
   }
 
-  const origin = parent.captureOrigin(trigger);
+  const origin = parent?.captureOrigin(trigger);
   const chart = createReferenceWindowFor(key);
-  const options = keys.some(key => boPartOneSections.includes(key)) ? ["part-one-roles", ...keys] : keys;
-  if (
-    (boPartOneSections.includes(clause) && !boWorkflows[clause]) ||
-    ["§7", "§8B", "§13"].every(key => keys.includes(key))
-  ) clause = "part-one-roles";
+  const comparisons = Object.hasOwn(boComparisonFlows, clause)
+    ? [clause]
+    : comparisonKeysFor(keys);
+  const options = [...comparisons, ...keys];
+  if (!Object.hasOwn(boComparisonFlows, clause)) {
+    const sharedComparison = comparisons.find(name =>
+      keys.filter(section => boComparisonFlows[name].sections.includes(section)).length >= 2);
+    if (sharedComparison || (!boWorkflows[clause] && comparisons.length)) {
+      clause = sharedComparison ?? comparisons[0];
+    }
+  }
   const show = () => {
-    const title = clause === "part-one-roles" ? "第 1 部｜邊個負責咩？" :
+    const comparison = boComparisonFlows[clause];
+    const title = comparison ? comparison.title :
       `${clause}｜${boWorkflows[clause] ? "條文流程圖" : "條文索引"}`;
     chart.showFrameworkDialog(title, renderProvisionFlow(clause, options), "bo", parent);
     chart.setOrigin(origin);
     chart.focus();
   };
+  chart.dialog.addEventListener("keydown", event => {
+    if (event.key === "Escape") chart.dialog.close();
+  });
+  if (isStandalone && trigger) {
+    chart.dialog.addEventListener("close", () => trigger.focus({ preventScroll: true }), { once: true });
+  }
   chart.dialog.addEventListener("change", event => {
     if (!event.target.matches("[data-provision-flow-select]")) return;
     clause = event.target.value;
@@ -788,15 +822,21 @@ function openProvisionFlow(keys, parent, trigger, clause) {
     chart.dialog.querySelector("[data-provision-flow-select]").focus({ preventScroll: true });
   });
   chart.dialog.addEventListener("click", event => {
+    const switchButton = event.target.closest("[data-provision-flow-switch]");
+    if (switchButton) {
+      clause = switchButton.dataset.provisionFlowSwitch;
+      show();
+      return;
+    }
     const node = event.target.closest("[data-provision-flow-path]");
     if (!node) return;
     const path = node.dataset.provisionFlowPath;
     const targetClause = node.dataset.provisionFlowSection || clause;
-    if (clause === "part-one-roles") {
+    if (Object.hasOwn(boComparisonFlows, clause)) {
       openLinkedProvision(targetClause + path, chart, node);
       return;
     }
-    if (parent.showProvisionPath(targetClause, path)) {
+    if (parent?.showProvisionPath(targetClause, path)) {
       chart.setOrigin(parent.captureOrigin(trigger));
       return;
     }
@@ -828,18 +868,25 @@ function renderWorkflow(sequence, clause) {
 }
 
 function renderProvisionFlow(clause, options) {
+  const isComparison = Object.hasOwn(boComparisonFlows, clause);
   const heading = boProvisionHeadings[clause];
-  const reference = clause === "part-one-roles" ? boPartOneRoles : boProvisionFlows[clause];
+  const reference = isComparison ? boComparisonReferences[clause] : boProvisionFlows[clause];
   const workflow = boWorkflows[clause];
   const comparisons = boRuleComparisons[clause] ?? [];
   const fallbackRows = typeof heading === "object"
     ? Object.entries(heading).map(([path, label]) => [[path.replace("-", " 至 "), label]])
     : [[["", heading || boPlainProvisions[clause]?.[1]]]];
   const [intro, groups] = reference ?? ["按款號查閱條文。", [["款項對照", fallbackRows]]];
-  const picker = options.length > 1 ? `<label class="quiz-picker">揀條文 <select data-provision-flow-select>${options.map(key => {
-    const label = key === "part-one-roles" ? "第 1 部｜邊個負責咩？" : `${boText(key)}｜${boPlainProvisions[key][1]}`;
+  const picker = options.length > 1 ? `<label class="quiz-picker">揀流程圖／條文 <select data-provision-flow-select>${options.map(key => {
+    const label = boComparisonFlows[key] ? `⇄ ${boComparisonFlows[key].title}` : `${boText(key)}｜${boPlainProvisions[key][1]}`;
     return `<option value="${escapeText(key)}"${key === clause ? " selected" : ""}>${escapeText(label)}</option>`;
   }).join("")}</select></label>` : "";
+  const switchComparisons = !isComparison
+    ? options.filter(key => Object.hasOwn(boComparisonFlows, key))
+    : [];
+  const switchBar = switchComparisons.length ? `<div class="comparison-switch-row">${switchComparisons.map(key =>
+    `<button type="button" class="comparison-switch-button" data-provision-flow-switch="${escapeText(key)}">⇄ 相似條文點分：${escapeText(boComparisonFlows[key].shortTitle)}</button>`
+  ).join("")}</div>` : "";
   const referenceGroups = groups.map(([title, rows]) => `<section class="provision-chart-group">
     <h3>${escapeText(title)}</h3>
     <div class="provision-chart-rows">
@@ -849,10 +896,10 @@ function renderProvisionFlow(clause, options) {
     </div>
   </section>`).join("");
   return `<div class="provision-chart">
-    ${picker}${comparisons.map(([, text]) => `<p class="provision-key-comparison">${renderProvisionText(text, clause)}</p>`).join("")}<p class="provision-chart-intro">${renderProvisionText(intro, clause)}</p>
+    ${picker}${switchBar}${comparisons.map(([, text]) => `<p class="provision-key-comparison">${renderProvisionText(text, clause)}</p>`).join("")}<p class="provision-chart-intro">${renderProvisionText(intro, clause)}</p>
     ${workflow ? `
       ${renderWorkflow(workflow, clause)}
-      <details class="workflow-reference"><summary>款項對照同補充資料</summary>${referenceGroups}</details>`
+      <details class="workflow-reference"${isComparison ? " open" : ""}><summary>${isComparison ? "關鍵小分別逐項對照" : "款項對照同補充資料"}</summary>${referenceGroups}</details>`
       : referenceGroups}
   </div>`;
 }
@@ -1484,6 +1531,10 @@ page.addEventListener("click", event => {
   }
   if (button.dataset.boProvision) {
     openProvision(button.dataset.boProvision);
+    return;
+  }
+  if (button.dataset.boComparison) {
+    openComparisonFlow(button.dataset.boComparison, button);
     return;
   }
   if (button.dataset.boFlow) {
