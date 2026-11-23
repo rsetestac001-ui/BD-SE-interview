@@ -821,6 +821,7 @@ function renderProvisionFlow(clause, options) {
   const heading = boProvisionHeadings[clause];
   const reference = clause === "part-one-roles" ? boPartOneRoles : boProvisionFlows[clause];
   const workflow = boWorkflows[clause];
+  const comparisons = boRuleComparisons[clause] ?? [];
   const fallbackRows = typeof heading === "object"
     ? Object.entries(heading).map(([path, label]) => [[path.replace("-", " 至 "), label]])
     : [[["", heading || boPlainProvisions[clause]?.[1]]]];
@@ -838,7 +839,7 @@ function renderProvisionFlow(clause, options) {
     </div>
   </section>`).join("");
   return `<div class="provision-chart">
-    ${picker}<p class="provision-chart-intro">${renderProvisionText(intro, clause)}</p>
+    ${picker}${comparisons.map(([, text]) => `<p class="provision-key-comparison">${renderProvisionText(text, clause)}</p>`).join("")}<p class="provision-chart-intro">${renderProvisionText(intro, clause)}</p>
     ${workflow ? `
       ${renderWorkflow(workflow, clause)}
       <details class="workflow-reference"><summary>款項對照同補充資料</summary>${referenceGroups}</details>`
@@ -1029,15 +1030,18 @@ function openProvisionPrinciple(trigger, parent) {
   const inactive = /^(?:已廢除|因時效已過而略去)/.test(title) ||
     entries.some(([label, text]) => label === path && text === "原文註明呢個編號已廢除或略去。");
   const note = path ? boClausePrinciples[section]?.[path] : boSectionPrinciples[section];
+  const comparison = boRuleComparisons[section]?.find(([paths]) => paths.includes(path))?.[1];
   const provisionLabel = describePrincipleTarget(section, path);
   const source = `${references.bo[2]}?xpid=${encodeURIComponent(anchor)}`;
   const explanation = inactive
     ? "呢個編號已廢除或略去。查舊個案時，要對返當時有效嘅版本。"
     : note;
+  const comparisonParagraph = comparison && !inactive
+    ? `<p class="provision-key-comparison">${renderProvisionText(comparison, section, path)}</p>` : "";
   const paragraphs = explanation
     ? explanation.split("\n").map(paragraph => `<p>${renderProvisionText(paragraph, section, path)}</p>`).join("")
-    : '<p class="principle-context">呢段暫未有獨立原理解說。</p>';
-  const body = `<div class="reference-item provision-principle">${paragraphs}
+    : comparisonParagraph ? "" : '<p class="principle-context">呢段暫未有獨立原理解說。</p>';
+  const body = `<div class="reference-item provision-principle">${comparisonParagraph}${paragraphs}
     <a href="${source}" target="_blank" rel="noopener noreferrer">睇 ${escapeText(describePrincipleTarget(section, ""))}官方原文 ↗</a>
   </div>`;
   const origin = parent?.captureOrigin(trigger, false);
