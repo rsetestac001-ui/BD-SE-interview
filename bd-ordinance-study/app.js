@@ -1304,7 +1304,7 @@ function openProvisionPrinciple(trigger, parent) {
   const paragraphs = explanation
     ? explanation.split("\n").map(paragraph => `<p>${renderProvisionText(paragraph, section, path)}</p>`).join("")
     : comparisonParagraph ? "" : '<p class="principle-context">呢段暫未有獨立原理解說。</p>';
-  const body = `<div class="reference-item provision-principle">${comparisonParagraph}${paragraphs}
+  const body = `<div class="reference-item provision-principle">${comparisonParagraph}${inactive ? "" : renderSubmissionForms(section, path)}${paragraphs}
     <a href="${source}" target="_blank" rel="noopener noreferrer">睇 ${escapeText(describePrincipleTarget(section, ""))}官方原文 ↗</a>
   </div>`;
   const origin = parent?.captureOrigin(trigger, false);
@@ -1318,6 +1318,14 @@ function openProvisionPrinciple(trigger, parent) {
     });
     if (!origin) window.dialog.addEventListener("close", () => trigger.focus({ preventScroll: true }), { once: true });
   }, parent);
+}
+
+function renderSubmissionForms(section, path = "") {
+  const forms = boSubmissionForms[section]?.[path];
+  if (!forms) return "";
+  return `<ul class="submission-forms" aria-label="要交嘅表格">${forms.map(([code, purpose, source]) =>
+    `<li><a href="${escapeText(boFormSources[source])}" target="_blank" rel="noopener noreferrer">${escapeText(code)} ↗</a> ${escapeText(purpose)}</li>`
+  ).join("")}</ul>`;
 }
 
 function renderProvisionTree(entries, headings, section) {
@@ -1361,7 +1369,7 @@ function renderProvisionTree(entries, headings, section) {
     const path = parentPath + item.number;
     const number = `<div class="provision-number">${escapeText(label)}</div>`;
     const caption = `<div class="provision-caption">${number}${isSubsection ? renderFavoriteButton(section, path) : ""}${renderPrincipleButton(section, path)}${renderEnglishButton(section, path)}${renderNewsButton(section, path)}</div>`;
-    return `<li class="provision-branch" data-provision-path="${escapeText(path)}">${caption}${heading ? renderProvisionHeading(heading, section, path) : ""}<ol role="list">${renderItems(item.items, depth + 1, path)}</ol></li>`;
+    return `<li class="provision-branch" data-provision-path="${escapeText(path)}">${caption}${heading ? renderProvisionHeading(heading, section, path) : ""}${renderSubmissionForms(section, path)}<ol role="list">${renderItems(item.items, depth + 1, path)}</ol></li>`;
   }).join("");
   const introduction = typeof headings === "string"
     ? `<li class="provision-caption">${renderProvisionHeading(headings, section)}${renderFavoriteButton(section)}</li>` : "";
@@ -1380,7 +1388,7 @@ function renderOccupationGuide() {
       <section class="occupation-path">
         <h4>一般情況 <span>${renderProvisionText("第 (7) 款", "§21")}</span></h4>
         <ol>
-          <li>申請人用指明表格提交 OP／TOP 申請</li>
+          <li>申請人交 BA13 申請 OP，或者交 BA12 申請 TOP</li>
           <li><strong>由建築事務監督收到申請嗰日起計 14 日</strong></li>
         </ol>
       </section>
@@ -1432,7 +1440,7 @@ function expandClause(clause, open = false) {
       ${renderPrincipleButton(root)}${renderEnglishButton(root)}${renderNewsButton(root)}
     </div>
     <ul class="provision-legend" aria-label="重點標記"><li class="provision-mark--key">條文重點</li><li class="provision-mark--rule">要求／例外</li><li class="provision-mark--time">時間／限期</li><li class="provision-mark--term">撳專有名詞睇解釋</li></ul>
-    ${renderProvisionTree(details, headings, root)}</details>`;
+    ${selected ? "" : renderSubmissionForms(root)}${renderProvisionTree(details, headings, root)}</details>`;
 }
 
 function renderFlowClauses(clauses) {
