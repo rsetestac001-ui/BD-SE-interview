@@ -11,3 +11,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Pull requests
 
 For work requested by the repository owner, open a pull request and merge it into `main` once the applicable checks pass, the pull request is mergeable, and the head commit still matches the reviewed version. Treat this as standing authorization for this repository. Follow branch protections and report any blocker. Follow an explicit request to leave a pull request open.
+
+## Statutory submissions in study content
+
+When describing a statutory application, notification or certificate, identify the applicable form by its verified number or official title, say who submits it and when, and link to the current Buildings Department form source. Where the number cannot be verified, name the document and state what still needs confirmation. Update the relevant lesson, flow and answer variants together.

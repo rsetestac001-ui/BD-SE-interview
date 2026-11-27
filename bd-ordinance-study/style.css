@@ -146,6 +146,17 @@ dialog.floating[style*="left"] { inset: auto; margin: 0; }
   color: #fff;
 }
 .provision-copy > strong { font-size: .92em; }
+ul.submission-forms {
+  display: grid;
+  gap: .4em;
+  list-style: none;
+  margin: .45em 0 .7em;
+  padding: .55em .75em;
+  border-left: 3px solid #4b7c6d;
+  background: #edf4f0;
+  overflow-wrap: anywhere;
+}
+.submission-forms a { font-weight: 750; color: #214572; text-underline-offset: .15em; }
 .provision-tree .provision-heading {
   margin: 0 0 4px;
   color: #214572;
